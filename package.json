@@ -4,12 +4,24 @@
   "description": "Happy Farm Game in JavaScript",
   "main": "index.html",
   "scripts": {
-    "dev": "vite",
+    "client": "vite",
+    "server": "node server/index.js",
+    "dev": "concurrently \"npm:server\" \"npm:client\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server/index.js"
   },
   "devDependencies": {
     "jimp": "^1.6.1",
     "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "concurrently": "^10.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.22.5"
   }
 }

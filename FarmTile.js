@@ -20,6 +20,11 @@ export class FarmTile {
         // Bind DOM click
         this.el.addEventListener('click', (e) => {
             if (this.game.isDesignMode || this.game.hasDragged) return;
+            if (this.game.isVisitingFarm) {
+                e.stopPropagation();
+                this.game.showToast('Bạn đang tham quan nên chỉ có thể xem farm này.');
+                return;
+            }
             // If clicked on the scythe basket icon itself, stop propagation and harvest
             if (e.target.closest('.harvest-basket')) {
                 e.stopPropagation();
@@ -144,7 +149,7 @@ export class FarmTile {
             const midCount = this.game.inventory.state.inventory.fertilizers?.mid || 0;
             const highCount = this.game.inventory.state.inventory.fertilizers?.high || 0;
 
-            if (midCount > 0 || highCount > 0) {
+            if (!this.game.isVisitingFarm && (midCount > 0 || highCount > 0)) {
                 timer.classList.add('has-fertilizers');
                 
                 const fertList = document.createElement('div');
@@ -181,7 +186,7 @@ export class FarmTile {
         }
 
         // 3. Render harvest scythe scythe basket
-        if (plot.state === 'mature') {
+        if (!this.game.isVisitingFarm && plot.state === 'mature') {
             const basket = document.createElement('div');
             basket.className = 'harvest-basket';
             basket.innerHTML = `

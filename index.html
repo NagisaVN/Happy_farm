@@ -27,6 +27,37 @@
                 </div>
             </div>
 
+            <div id="auth-screen" class="auth-overlay active">
+                <div class="auth-panel glassmorphism">
+                    <div class="auth-brand">
+                        <span class="auth-logo">🌾</span>
+                        <h1>Happy Farm</h1>
+                        <p>Đăng nhập để chơi online, ghé thăm nông trại bạn bè và mua vật phẩm từ quầy hàng của họ.</p>
+                    </div>
+                    <div class="auth-tabs">
+                        <button id="auth-tab-login" class="auth-tab active" type="button">Đăng nhập</button>
+                        <button id="auth-tab-register" class="auth-tab" type="button">Tạo tài khoản</button>
+                    </div>
+                    <div id="auth-error" class="auth-error hide"></div>
+                    <form id="auth-login-form" class="auth-form">
+                        <label>Email</label>
+                        <input name="email" type="email" autocomplete="email" required>
+                        <label>Mật khẩu</label>
+                        <input name="password" type="password" autocomplete="current-password" minlength="6" required>
+                        <button type="submit" class="auth-submit">Vào nông trại</button>
+                    </form>
+                    <form id="auth-register-form" class="auth-form hide">
+                        <label>Email</label>
+                        <input name="email" type="email" autocomplete="email" required>
+                        <label>Mật khẩu</label>
+                        <input name="password" type="password" autocomplete="new-password" minlength="6" required>
+                        <label>Tên nông trại</label>
+                        <input name="farmName" type="text" maxlength="32" value="Happy Farm">
+                        <button type="submit" class="auth-submit">Tạo nông trại</button>
+                    </form>
+                </div>
+            </div>
+
             <!-- Game Viewport (Game World) -->
             <div id="game-viewport">
                 <!-- Farm World (Zoomable & Pannable Area) -->

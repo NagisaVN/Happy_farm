@@ -77,18 +77,27 @@ export class Inventory {
     constructor(game) {
         this.game = game;
         this.state = null;
-        this.loadGame();
+        this.saveTimer = null;
     }
 
-    loadGame() {
+    async loadGame() {
         try {
+            const payload = await this.game.api.getState();
+            let serverState = payload.state || {};
+
             const savedData = localStorage.getItem('happy_farm_state');
-            if (savedData) {
-                this.state = JSON.parse(savedData);
-                this.state = this.mergeDeep({}, DEFAULT_STATE, this.state);
-            } else {
-                this.state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            if (savedData && !payload.importedLocalSave) {
+                const shouldImport = window.confirm('Tìm thấy save cũ trên trình duyệt. Bạn muốn nhập tiến trình này vào tài khoản online không?');
+                if (shouldImport) {
+                    const imported = await this.game.api.importLocalSave(JSON.parse(savedData));
+                    serverState = imported.state || serverState;
+                    localStorage.removeItem('happy_farm_state');
+                }
             }
+
+            this.state = this.mergeDeep({}, DEFAULT_STATE, serverState);
+            this.game.currentUser = payload.profile || this.game.api.profile;
+            this.game.importedLocalSave = Boolean(payload.importedLocalSave);
 
             // Migrate older saves to include farmName and signpost layout coordinate
             if (this.state) {
@@ -159,15 +168,28 @@ export class Inventory {
             }
         } catch (e) {
             console.error('Error loading game state:', e);
-            this.state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            throw e;
         }
     }
 
     saveGame() {
+        if (this.game?.isVisitingFarm) return;
+        clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => {
+            this.flushSave();
+        }, 250);
+    }
+
+    async flushSave() {
+        if (this.game?.isVisitingFarm) return;
+        if (!this.state || !this.game.api?.hasToken()) return;
         try {
-            localStorage.setItem('happy_farm_state', JSON.stringify(this.state));
+            await this.game.api.saveState(this.state);
         } catch (e) {
             console.error('Error saving game state:', e);
+            if (this.game?.showToast) {
+                this.game.showToast('Không lưu được dữ liệu online. Kiểm tra kết nối/server.');
+            }
         }
     }
 
