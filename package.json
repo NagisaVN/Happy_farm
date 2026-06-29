@@ -1,0 +1,15 @@
+{
+  "name": "happy-farm",
+  "version": "1.0.0",
+  "description": "Happy Farm Game in JavaScript",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "jimp": "^1.6.1",
+    "vite": "^5.0.0"
+  }
+}
