@@ -1,5 +1,6 @@
 const { createDefaultState, normalizeState } = require('./defaultState');
 const { inventoryToRows, rowsToInventory } = require('./itemCatalog');
+const { getSettingValue } = require('./systemSettingsStore');
 
 function parseStateJson(value) {
     if (!value) return {};
@@ -22,8 +23,8 @@ async function replaceInventory(conn, userId, inventory) {
     }
 }
 
-async function createPlayerState(conn, userId, farmName = 'Happy Farm') {
-    const state = createDefaultState(farmName);
+async function createPlayerState(conn, userId, farmName = 'Happy Farm', systemSettings = {}) {
+    const state = createDefaultState(farmName, systemSettings);
     await conn.query(
         'INSERT INTO player_state (user_id, state_json) VALUES (?, ?)',
         [userId, JSON.stringify(state)]
@@ -34,6 +35,7 @@ async function createPlayerState(conn, userId, farmName = 'Happy Farm') {
 
 async function savePlayerState(conn, userId, incomingState, importedLocalSave = null) {
     const normalized = normalizeState(incomingState, incomingState?.farmName || 'Happy Farm');
+    normalized.coins = Math.min(normalized.coins, Number(getSettingValue('MAX_GOLD', 2147483647)));
     await conn.query(
         'UPDATE farms SET name = ?, coins = ?, gems = ? WHERE user_id = ?',
         [normalized.farmName, normalized.coins, normalized.gems, userId]

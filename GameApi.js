@@ -91,6 +91,14 @@ class GameApi {
         return payload;
     }
 
+    getGameConfig() {
+        return this.request('/api/game-config');
+    }
+
+    buyShopProduct(productId, quantity) {
+        return this.request('/api/shop/purchase', { method: 'POST', body: { productId, quantity } });
+    }
+
     saveState(state) {
         return this.request('/api/me/state', {
             method: 'PUT',
@@ -102,6 +110,65 @@ class GameApi {
         return this.request('/api/me/import-local-save', {
             method: 'POST',
             body: { state }
+        });
+    }
+
+    async getProfile() {
+        const payload = await this.request('/api/me/profile');
+        this.profile = payload.profile;
+        return payload;
+    }
+
+    async updateProfile(profile) {
+        const payload = await this.request('/api/me/profile', {
+            method: 'PUT',
+            body: profile
+        });
+        if (payload.token) this.setToken(payload.token);
+        this.profile = payload.profile;
+        return payload;
+    }
+
+    changePassword(passwords) {
+        return this.request('/api/me/password', {
+            method: 'PUT',
+            body: passwords
+        });
+    }
+
+    getOrders() {
+        return this.request('/api/orders');
+    }
+
+    deliverOrder(orderId) {
+        return this.request(`/api/orders/${orderId}/deliver`, {
+            method: 'POST'
+        });
+    }
+
+    trashOrder(orderId) {
+        return this.request(`/api/orders/${orderId}/trash`, {
+            method: 'POST'
+        });
+    }
+
+    claimWeeklyMilestone(milestoneId) {
+        return this.request(`/api/weekly/milestones/${milestoneId}/claim`, {
+            method: 'POST'
+        });
+    }
+
+    getWeeklyLeaderboard() {
+        return this.request('/api/leaderboard/weekly');
+    }
+
+    getLevelLeaderboard() {
+        return this.request('/api/leaderboard/levels');
+    }
+
+    claimWeeklyRankReward() {
+        return this.request('/api/leaderboard/weekly/claim-rank-reward', {
+            method: 'POST'
         });
     }
 

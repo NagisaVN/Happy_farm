@@ -1,0 +1,169 @@
+
+> happy-farm@1.0.0 dev
+> concurrently "npm:server" "npm:client"
+
+[client] 
+[client] > happy-farm@1.0.0 client
+[client] > vite
+[client] 
+[server] 
+[server] > happy-farm@1.0.0 server
+[server] > node server/index.js
+[server] 
+[client] [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+[client] Port 5173 is in use, trying another one...
+[client] 
+[client]   [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m527[22m[2m[0m ms[22m
+[client] 
+[client]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+[client] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[server] ◇ injected env (8) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+[server] ◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+[server] Could not start server. Check MySQL settings and .env.
+[server] AggregateError: 
+[server]     at initDb (D:\laragon\www\Happy_fam\server\db.js:30:21)
+[server]     at Object.<anonymous> (D:\laragon\www\Happy_fam\server\index.js:1147:1)
+[server]     at Module._compile (node:internal/modules/cjs/loader:1830:14)
+[server]     at Object..js (node:internal/modules/cjs/loader:1961:10)
+[server]     at Module.load (node:internal/modules/cjs/loader:1553:32)
+[server]     at Module._load (node:internal/modules/cjs/loader:1355:12)
+[server]     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+[server]     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+[server]     at node:internal/main/run_main_module:33:47 {
+[server]   code: 'ECONNREFUSED',
+[server]   fatal: true,
+[server]   [errors]: [
+[server]     Error: connect ECONNREFUSED ::1:3306
+[server]         at createConnectionError (node:net:1746:14)
+[server]         at afterConnectMultiple (node:net:1776:16) {
+[server]       errno: -4078,
+[server]       code: 'ECONNREFUSED',
+[server]       syscall: 'connect',
+[server]       address: '::1',
+[server]       port: 3306
+[server]     },
+[server]     Error: connect ECONNREFUSED 127.0.0.1:3306
+[server]         at createConnectionError (node:net:1746:14)
+[server]         at afterConnectMultiple (node:net:1776:16) {
+[server]       errno: -4078,
+[server]       code: 'ECONNREFUSED',
+[server]       syscall: 'connect',
+[server]       address: '127.0.0.1',
+[server]       port: 3306
+[server]     }
+[server]   ]
+[server] }
+[server] Starting local fallback API because MySQL is unavailable.
+[server] Happy Farm local fallback server running on http://127.0.0.1:3001
+[server] Local fallback data: C:\Users\Nagisa\AppData\Local\Temp\happy-farm-local-dev.json
+[server] npm run server exited with code 0
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/about.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/activate_banner_mb.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/dfd_landing_page.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/foreground_sidebar_main.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/how_it_works.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/iframe_block_page.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/nps_survey.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/page_banner_mb.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/preference.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/settings.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/site_status_block_page.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/site_status_site_report.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/site_status_typosquatting.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/statistics.html[22m
+[client] [2m11:20:28 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/whitelist.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/about.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/activate_banner_mb.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/dfd_landing_page.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/foreground_sidebar_main.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/how_it_works.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/iframe_block_page.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/nps_survey.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/page_banner_mb.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/preference.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/settings.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/site_status_block_page.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/site_status_site_report.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/site_status_typosquatting.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/statistics.html[22m
+[client] [2m11:20:29 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_1643910754/CRX_INSTALL/html/whitelist.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/about.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/activate_banner_mb.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/dfd_landing_page.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/foreground_sidebar_main.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/iframe_block_page.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/nps_survey.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/how_it_works.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/page_banner_mb.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/preference.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/settings.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/site_status_block_page.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/site_status_site_report.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/site_status_typosquatting.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/statistics.html[22m
+[client] [2m11:20:31 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/whitelist.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_rat_detection.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/advanced_protection_signal.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/advanced_protection_signal_toast.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/download_scan_popup.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/dws.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/esd_enrolled_detection_toast.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/esd_enrolled_intro_toast.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/esd_toast.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/no_native_toast.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/topright_bar/web_boost_upsell_right.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/topright_bar/web_boost_upsell_top.html[22m
+[client] [2m11:20:33 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/topbar/topbar_iframe_block.html[22m
+[client] [2m11:20:35 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_esd.html[22m
+[client] [2m11:20:35 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_home.html[22m
+[client] [2m11:20:35 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_main.html[22m
+[client] [2m11:20:35 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_mb.html[22m
+[client] [2m11:20:35 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_mb_faq.html[22m
+[client] [2m11:20:40 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_955906083/CRX_INSTALL/offscreendocument.html[22m
+[client] [2m11:20:41 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_955906083/CRX_INSTALL/offscreendocument.html[22m
+[client] [2m11:20:41 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi/1.107.1_0/offscreendocument.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/about.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/activate_banner_mb.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/dfd_landing_page.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/foreground_sidebar_main.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/iframe_block_page.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/nps_survey.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/how_it_works.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/page_banner_mb.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/preference.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/settings.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/site_status_block_page.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/site_status_site_report.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/site_status_typosquatting.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/statistics.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/whitelist.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_rat_detection.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_esd.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_home.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_main.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_mb.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/sidebar/sidebar_main/sidebar_mb_faq.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/advanced_protection_signal.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/advanced_protection_signal_toast.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/download_scan_popup.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/dws.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/esd_enrolled_detection_toast.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/esd_enrolled_intro_toast.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/esd_toast.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/balloon_message/no_native_toast.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/topright_bar/web_boost_upsell_right.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/topright_bar/web_boost_upsell_top.html[22m
+[client] [2m11:20:49 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/fheoggkfdfchfphceeifdbepaooicaho/8.1.0.9425_0/html/topbar/topbar_iframe_block.html[22m
+[client] [2m11:20:53 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_496569156/CRX_INSTALL/offscreen.html[22m
+[client] [2m11:20:54 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_496569156/CRX_INSTALL/offscreen.html[22m
+[client] [2m11:20:54 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/lmjegmlicamnimmfhcmpkclmigmmcbeh/3.10_0/offscreen.html[22m
+[client] [2m11:21:09 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_739486714/CRX_INSTALL/html/craw_window.html[22m
+[client] [2m11:21:09 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/Temp/scoped_dir13272_739486714/CRX_INSTALL/html/craw_window.html[22m
+[client] [2m11:21:09 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mtmp/chrome-feed-playtest/Default/Extensions/nmmhkkegccagdldgiimedpiccmgmieda/1.0.0.6_0/html/craw_window.html[22m
+[client] [2m11:24:50 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/scenes/MainScene.js[22m
+[client] [2m11:27:56 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/scenes/MainScene.js[22m
+[client] [2m11:28:57 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mGame.js[22m
+[client] [2m11:29:42 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/scenes/MainScene.js[22m
+[client] [2m11:30:50 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/scenes/MainScene.js[22m
+[client] [2m11:31:32 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/scenes/MainScene.js[22m
+[client] npm run client exited with code 4294967295

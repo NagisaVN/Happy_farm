@@ -1,23 +1,65 @@
 const { getStarterInventory } = require('./itemCatalog');
+const {
+    LAND_VERSION,
+    MAX_PLOTS,
+    STARTER_LAND_COUNT,
+    createDefaultPlot,
+    normalizeLandMeta,
+    normalizePlotsForLand
+} = require('./landConfig');
 
-function createDefaultState(farmName = 'Happy Farm') {
+const DEFAULT_ANIMAL_IDS = [
+    ['chicken-1', 'chicken'],
+    ['chicken-2', 'chicken'],
+    ['chicken-3', 'chicken'],
+    ['cow-1', 'cow'],
+    ['cow-2', 'cow'],
+    ['pig-1', 'pig'],
+    ['pig-2', 'pig']
+];
+
+function createAnimalRecord(type) {
+    return {
+        type,
+        status: 'hungry',
+        fedAt: null,
+        readyAt: null
+    };
+}
+
+function createDefaultAnimalProduction() {
+    return {
+        animals: Object.fromEntries(DEFAULT_ANIMAL_IDS.map(([id, type]) => [id, createAnimalRecord(type)])),
+        feedMill: {
+            activeJob: null
+        }
+    };
+}
+
+function createDefaultState(farmName = 'Happy Farm', systemSettings = {}) {
+    const startGold = Math.max(0, Number.parseInt(systemSettings.START_GOLD, 10) || 12450);
+    const startLevel = Math.max(1, Number.parseInt(systemSettings.START_LEVEL, 10) || 1);
+    const defaultExp = Math.max(1, Number.parseInt(systemSettings.DEFAULT_EXP, 10) || 100);
+    const defaultLandSize = Math.max(1, Math.min(MAX_PLOTS, Number.parseInt(systemSettings.DEFAULT_LAND_SIZE, 10) || STARTER_LAND_COUNT));
+    const defaultInventory = systemSettings.DEFAULT_INVENTORY && typeof systemSettings.DEFAULT_INVENTORY === 'object'
+        ? JSON.parse(JSON.stringify(systemSettings.DEFAULT_INVENTORY))
+        : getStarterInventory();
     return {
         farmName,
-        coins: 12450,
+        coins: startGold,
         gems: 35,
         energy: 120,
         maxEnergy: 120,
-        level: 15,
-        xp: 1250,
-        xpNeeded: 2000,
-        inventory: getStarterInventory(),
-        plots: Array.from({ length: 28 }, (_, i) => ({
-            id: i,
-            state: 'empty',
-            cropType: null,
-            plantTime: null,
-            growthDuration: 0
-        })),
+        level: startLevel,
+        xp: 0,
+        xpNeeded: defaultExp,
+        inventory: defaultInventory,
+        animalProduction: createDefaultAnimalProduction(),
+        land: {
+            version: LAND_VERSION,
+            unlockedCount: defaultLandSize
+        },
+        plots: Array.from({ length: MAX_PLOTS }, (_, i) => createDefaultPlot(i)),
         quests: [
             { id: 1, title: 'Người gieo mầm', desc: 'Trồng 5 hạt giống Cà rốt', target: 5, current: 0, rewardCoins: 150, rewardXp: 50, claimed: false, action: 'plant', type: 'carrot' },
             { id: 2, title: 'Mùa vụ đầu tiên', desc: 'Thu hoạch 5 Bắp ngô', target: 5, current: 0, rewardCoins: 300, rewardXp: 100, claimed: false, action: 'harvest', type: 'corn' },
@@ -31,7 +73,7 @@ function createDefaultState(farmName = 'Happy Farm') {
         stats: {
             plantedTotal: 0,
             harvestedTotal: 0,
-            coinsEarnedTotal: 12450,
+            coinsEarnedTotal: startGold,
             coinsSpentTotal: 0,
             timePlayed: 0
         },
@@ -54,6 +96,8 @@ function createDefaultState(farmName = 'Happy Farm') {
             signpost: { left: 36, top: 12 },
             chickenCoop: { left: 10, top: 56 },
             cowPen: { left: 70, top: 18 },
+            pigPen: { left: 80, top: 62 },
+            feedMill: null,
             decorations: [],
             pavedPaths: []
         },
@@ -79,6 +123,9 @@ function mergeDeep(target, ...sources) {
 }
 
 function normalizeState(input, farmName = 'Happy Farm') {
+    const hadBuildingInventory = Boolean(input?.inventory?.buildings);
+    const legacyFeedMillJob = input?.animalProduction?.feedMill?.activeJob;
+    const hasLandVersion = Number(input?.land?.version) === LAND_VERSION;
     const state = mergeDeep(createDefaultState(farmName), input || {});
     state.farmName = String(state.farmName || farmName || 'Happy Farm').slice(0, 64);
     state.coins = Math.max(0, Number.parseInt(state.coins, 10) || 0);
@@ -89,9 +136,49 @@ function normalizeState(input, farmName = 'Happy Farm') {
     state.xp = Math.max(0, Number.parseInt(state.xp, 10) || 0);
     state.xpNeeded = Math.max(1, Number.parseInt(state.xpNeeded, 10) || 100);
 
-    if (!Array.isArray(state.plots) || state.plots.length !== 28) {
+    if (!Array.isArray(state.plots) || state.plots.length !== MAX_PLOTS) {
         const oldPlots = Array.isArray(state.plots) ? state.plots : [];
-        state.plots = Array.from({ length: 28 }, (_, i) => oldPlots[i] || createDefaultState().plots[i]);
+        state.plots = Array.from({ length: MAX_PLOTS }, (_, i) => oldPlots[i] || createDefaultPlot(i));
+    }
+    state.land = normalizeLandMeta(hasLandVersion ? state.land : { unlockedCount: STARTER_LAND_COUNT });
+    state.plots = normalizePlotsForLand(state.plots, state.land, { clearLocked: true });
+    state.inventory = mergeDeep(getStarterInventory(), state.inventory || {});
+    ['seeds', 'crops', 'fertilizers', 'feeds', 'animalProducts'].forEach(category => {
+        Object.entries(state.inventory[category] || {}).forEach(([itemId, value]) => {
+            state.inventory[category][itemId] = Math.max(0, Number.parseInt(value, 10) || 0);
+        });
+    });
+    if (!state.inventory.buildings) state.inventory.buildings = { feed_mill: 0 };
+    state.inventory.buildings.feed_mill = Math.min(1, Math.max(0, Number.parseInt(state.inventory.buildings.feed_mill, 10) || 0));
+
+    if (!state.layout) state.layout = {};
+    if (!state.layout.pigPen) state.layout.pigPen = { left: 80, top: 62 };
+    if (state.layout.feedMill && typeof state.layout.feedMill !== 'object') state.layout.feedMill = null;
+
+    if (!state.animalProduction || typeof state.animalProduction !== 'object') {
+        state.animalProduction = createDefaultAnimalProduction();
+    }
+    if (!state.animalProduction.animals || typeof state.animalProduction.animals !== 'object') {
+        state.animalProduction.animals = {};
+    }
+    DEFAULT_ANIMAL_IDS.forEach(([id, type]) => {
+        const existing = state.animalProduction.animals[id];
+        if (!existing || existing.type !== type) {
+            state.animalProduction.animals[id] = createAnimalRecord(type);
+            return;
+        }
+        if (!['hungry', 'producing'].includes(existing.status)) {
+            existing.status = 'hungry';
+        }
+        existing.fedAt = existing.status === 'producing' ? existing.fedAt || null : null;
+        existing.readyAt = existing.status === 'producing' ? existing.readyAt || null : null;
+    });
+    if (!state.animalProduction.feedMill || typeof state.animalProduction.feedMill !== 'object') {
+        state.animalProduction.feedMill = { activeJob: null };
+    }
+    if (!hadBuildingInventory && legacyFeedMillJob) {
+        state.inventory.buildings.feed_mill = 1;
+        state.layout.feedMill = state.layout.feedMill || { left: 54, top: 27 };
     }
 
     return state;

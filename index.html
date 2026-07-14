@@ -391,6 +391,22 @@
                             <div class="building-tooltip">🪧 Đặt Tên Nông Trại</div>
                         </div>
 
+                        <div id="pig-pen" class="farm-building clickable-building" style="left: 80%; top: 62%;">
+                            <div class="pig-pen-ground"></div>
+                            <div class="pig-pen-fence">&#x1FAB5;</div>
+                            <div class="building-tooltip">🐖 Chuồng Heo</div>
+                        </div>
+
+                        <div id="feed-mill-building" class="farm-building clickable-building hide" aria-label="Máy trộn thức ăn">
+                            <div class="feed-mill-shadow"></div>
+                            <div class="feed-mill-body">
+                                <div class="feed-mill-hopper">🌽</div>
+                                <div class="feed-mill-drum">⚙️</div>
+                                <div class="feed-mill-chute"></div>
+                            </div>
+                            <div class="building-tooltip">⚙️ Máy Trộn</div>
+                        </div>
+
                         <!-- Interactive Game Objects -->
                         <div id="game-world-objects">
                             <!-- Farmland Grid Container -->
@@ -523,6 +539,7 @@
 
                 <!-- Selected Crop Detail Bar (Bottom Center) -->
                 <div id="crop-detail-panel" class="detail-panel hide">
+                    <button id="btn-close-crop-detail" class="crop-detail-close" type="button" aria-label="Đóng bảng phân bón">×</button>
                     <div class="detail-content">
                         <img id="detail-crop-icon" src="" alt="crop icon">
                         <div class="detail-text">
@@ -656,14 +673,50 @@
                         <button class="modal-close" data-close="quests">×</button>
                     </div>
                     <div class="modal-body">
-                        <div id="quest-list" class="quest-container">
-                            <!-- Quests populated by JS -->
+                        <div class="weekly-board-strip">
+                            <div>
+                                <span class="weekly-label">Điểm tuần</span>
+                                <strong id="weekly-score">0 điểm</strong>
+                            </div>
+                            <div>
+                                <span class="weekly-label">Còn lại</span>
+                                <strong id="weekly-reset">--</strong>
+                            </div>
+                        </div>
+                        <div id="weekly-milestones" class="weekly-milestones"></div>
+                        <div id="quest-list" class="order-container">
+                            <!-- Delivery orders populated by JS -->
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- MODAL: Thành Tích (Achievements) -->
+            <!-- MODAL: Weekly Leaderboard -->
+            <div id="modal-leaderboard" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism leaderboard-modal">
+                    <div class="modal-header">
+                        <h2>BẢNG XẾP HẠNG CẤP ĐỘ</h2>
+                        <button class="modal-close" data-close="leaderboard">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="leaderboard-summary">
+                            <div>
+                                <span class="weekly-label">Hạng của bạn</span>
+                                <strong id="leaderboard-my-rank">--</strong>
+                            </div>
+                            <div>
+                                <span class="weekly-label">Xếp theo</span>
+                                <strong id="leaderboard-reset">Cấp độ &amp; XP</strong>
+                            </div>
+                        </div>
+                        <div id="rank-reward-panel" class="rank-reward-panel"></div>
+                        <div id="leaderboard-list" class="leaderboard-list"></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="modal-achievements" class="modal hide">
                 <div class="modal-overlay"></div>
                 <div class="modal-content glassmorphism">
@@ -755,6 +808,46 @@
                     </div>
                     <div class="modal-body">
                         <div class="settings-options">
+                            <section class="account-settings-section">
+                                <h3>👤 Thông Tin Cá Nhân</h3>
+                                <form id="profile-settings-form" class="account-settings-form">
+                                    <label>
+                                        Mã tài khoản
+                                        <input id="profile-account-id" type="text" readonly>
+                                    </label>
+                                    <label>
+                                        Email
+                                        <input id="profile-email" name="email" type="email" autocomplete="email" maxlength="255" required>
+                                    </label>
+                                    <label class="account-field-wide">
+                                        Tên nông trại
+                                        <input id="profile-farm-name" name="farmName" type="text" maxlength="32" required>
+                                    </label>
+                                    <button class="auth-submit account-field-wide" type="submit">Lưu thông tin</button>
+                                </form>
+                                <div id="profile-settings-message" class="account-settings-message hide"></div>
+                            </section>
+                            <hr class="modal-divider">
+                            <section class="account-settings-section">
+                                <h3>🔒 Đổi Mật Khẩu</h3>
+                                <form id="password-settings-form" class="account-settings-form">
+                                    <label class="account-field-wide">
+                                        Mật khẩu hiện tại
+                                        <input name="currentPassword" type="password" autocomplete="current-password" required>
+                                    </label>
+                                    <label>
+                                        Mật khẩu mới
+                                        <input name="newPassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" required>
+                                    </label>
+                                    <label>
+                                        Nhập lại mật khẩu mới
+                                        <input name="confirmPassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" required>
+                                    </label>
+                                    <button class="auth-submit account-field-wide" type="submit">Đổi mật khẩu</button>
+                                </form>
+                                <div id="password-settings-message" class="account-settings-message hide"></div>
+                            </section>
+                            <hr class="modal-divider">
                             <div class="setting-row">
                                 <span>Âm thanh hiệu ứng (SFX)</span>
                                 <label class="switch">
@@ -770,6 +863,7 @@
                                 </label>
                             </div>
                             <hr class="modal-divider">
+                            <button id="btn-logout" class="btn-logout-account" type="button">🚪 Đăng Xuất Tài Khoản</button>
                             <button id="btn-reset-game" class="btn-danger">Reset Dữ Liệu Game</button>
                         </div>
                     </div>
@@ -813,6 +907,45 @@
                 </div>
             </div>
 
+            <!-- Land Purchase Dialog -->
+            <div id="modal-land-purchase" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism dialog-modal land-purchase-modal">
+                    <div class="modal-header">
+                        <h2 id="land-purchase-title">Mua ô đất</h2>
+                        <button class="modal-close" id="btn-land-buy-close">×</button>
+                    </div>
+                    <div class="modal-body dialog-body">
+                        <p id="land-purchase-message" class="dialog-message">Kiểm tra cấp để mở rộng nông trại.</p>
+                        <div class="land-purchase-summary">
+                            <span class="land-purchase-icon">🪧</span>
+                            <span>Chọn vàng hoặc kim cương để mở khóa ô đất mới.</span>
+                        </div>
+                        <div class="dialog-buttons land-purchase-buttons">
+                            <button id="btn-land-buy-gold" class="rect-btn success dialog-btn land-pay-btn">Mua bằng Vàng</button>
+                            <button id="btn-land-buy-gems" class="rect-btn success dialog-btn land-pay-btn gem-pay">Mua bằng KC</button>
+                            <button id="btn-land-buy-cancel" class="rect-btn danger dialog-btn">Hủy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modal-feed-mill" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism feed-mill-modal">
+                    <div class="modal-header">
+                        <h2>⚙️ MÁY TRỘN THỨC ĂN</h2>
+                        <button class="modal-close" data-close="feed-mill">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="feed-mill-panel" class="shop-panel">
+                            <div id="feed-mill-status" class="feed-mill-status"></div>
+                            <div id="feed-recipe-list" class="shop-grid feed-recipe-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Floating Notification Banner -->
             <div id="notification-toast" class="toast hide">
                 <span id="toast-message">Chào mừng quay lại nông trại!</span>
@@ -823,6 +956,10 @@
                 <span>🛠️ CHẾ ĐỘ THIẾT KẾ: Kéo thả Nhà, Chuồng, Vườn hoặc Cây cối để sắp xếp</span>
             </div>
             <div id="design-controls" class="design-hud-overlay hide">
+                <div id="design-feed-mill-tray" class="design-placement-tray hide">
+                    <span>Vật phẩm chưa đặt</span>
+                    <button id="design-feed-mill-item" type="button" title="Kéo Máy trộn ra nông trại">⚙️ Máy trộn</button>
+                </div>
                 <button id="btn-design-save" class="rect-btn success">Lưu Bố Cục</button>
                 <button id="btn-design-cancel" class="rect-btn danger">Hủy Bỏ</button>
             </div>

@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Farm - Nông Trại Vui Vẻ</title>
+    <!-- Google Fonts Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/assets/game-u6bCbejM.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="stylesheet" crossorigin href="/assets/game-3gBqyVLL.css">
+</head>
+
+<body>
+    <div id="app-wrapper">
+        <!-- Game Container maintaining 16:9 Aspect Ratio -->
+        <div id="game-container">
+            <!-- Loading Overlay -->
+            <div id="loading-screen" class="overlay active">
+                <div class="loader-content">
+                    <h1>HAPPY FARM</h1>
+                    <div class="progress-bar-container">
+                        <div id="loading-progress" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <p>Đang tải nông trại...</p>
+                </div>
+            </div>
+
+            <div id="auth-screen" class="auth-overlay active">
+                <div class="auth-panel glassmorphism">
+                    <div class="auth-brand">
+                        <span class="auth-logo">🌾</span>
+                        <h1>Happy Farm</h1>
+                        <p>Đăng nhập để chơi online, ghé thăm nông trại bạn bè và mua vật phẩm từ quầy hàng của họ.</p>
+                    </div>
+                    <div class="auth-tabs">
+                        <button id="auth-tab-login" class="auth-tab active" type="button">Đăng nhập</button>
+                        <button id="auth-tab-register" class="auth-tab" type="button">Tạo tài khoản</button>
+                    </div>
+                    <div id="auth-error" class="auth-error hide"></div>
+                    <form id="auth-login-form" class="auth-form">
+                        <label>Email</label>
+                        <input name="email" type="email" autocomplete="email" required>
+                        <label>Mật khẩu</label>
+                        <input name="password" type="password" autocomplete="current-password" minlength="6" required>
+                        <button type="submit" class="auth-submit">Vào nông trại</button>
+                    </form>
+                    <form id="auth-register-form" class="auth-form hide">
+                        <label>Email</label>
+                        <input name="email" type="email" autocomplete="email" required>
+                        <label>Mật khẩu</label>
+                        <input name="password" type="password" autocomplete="new-password" minlength="6" required>
+                        <label>Tên nông trại</label>
+                        <input name="farmName" type="text" maxlength="32" value="Happy Farm">
+                        <button type="submit" class="auth-submit">Tạo nông trại</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Game Viewport (Game World) -->
+            <div id="game-viewport">
+                <!-- Farm World (Zoomable & Pannable Area) -->
+                <div id="farm-world">
+                    <!-- Farm Stage (The active 1280x720 game screen) -->
+                    <div id="farm-stage">
+                        <!-- Background Image -->
+                        <div id="paved-paths-container"></div>
+
+
+                        <!-- Procedural Forest Container -->
+                        <div id="forest-container"></div>
+
+                        <!-- Surrounding Fence Container -->
+                        <div id="fence-container">
+                            <svg id="fence-rails-svg" viewBox="0 0 1280 720">
+                                <ellipse cx="640" cy="360" rx="560" ry="300" fill="none" stroke="#8b5a2b"
+                                    stroke-width="4" />
+                                <ellipse cx="640" cy="360" rx="560" ry="293" fill="none" stroke="#8b5a2b"
+                                    stroke-width="4" />
+                            </svg>
+                            <div id="fence-posts"></div>
+                        </div>
+
+
+
+                        <!-- Edge covers (Overlays to hide the cut-off assets at the borders) -->
+                        <!-- Farmhouse Overlay (To cover the cut-off farmhouse in background) -->
+                        <div id="farmhouse-overlay" class="farm-building clickable-building">
+                            <img src="/assets/farmhouse_clean-Dl5u7Ify.png" alt="Farmhouse">
+                            <div class="building-tooltip">📊 Thống Kê</div>
+                        </div>
+
+                        <!-- Barn Overlay (To cover the cut-off red barn in background) -->
+                        <div id="barn-overlay" class="farm-building clickable-building">
+                            <img src="/assets/barn_clean-D4181g6A.png" alt="Barn">
+                            <div class="building-tooltip">🎒 Kho Đồ</div>
+                        </div>
+
+                        <!-- Dynamic Buildings representing HUD features -->
+                        <div id="shop-building" class="farm-building clickable-building">
+                            <img src="/assets/shop_clean-BdAWzD0d.png" alt="Shop">
+                            <div class="building-tooltip">🏪 Cửa Hàng</div>
+                        </div>
+
+                        <div id="pet-building" class="farm-building clickable-building">
+                            <img src="/assets/pet_clean-C5fm9dRM.png" alt="Pet House">
+                            <div class="building-tooltip">🐾 Thú Cưng</div>
+                        </div>
+
+                        <!-- Chicken Coop -->
+                        <div id="chicken-coop" class="farm-building clickable-building" style="left: 10%; top: 56%;">
+                            <svg viewBox="0 0 100 100" width="100" height="100">
+                                <defs>
+                                    <radialGradient id="coopShadow" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="rgba(0,0,0,0.4)" />
+                                        <stop offset="100%" stop-color="rgba(0,0,0,0)" />
+                                    </radialGradient>
+                                    <linearGradient id="roofLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#ec7063" />
+                                        <stop offset="100%" stop-color="#922b21" />
+                                    </linearGradient>
+                                    <linearGradient id="roofRight" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#f1948a" />
+                                        <stop offset="100%" stop-color="#b03a2e" />
+                                    </linearGradient>
+                                    <linearGradient id="wallL" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stop-color="#b9770e" />
+                                        <stop offset="100%" stop-color="#7e5109" />
+                                    </linearGradient>
+                                    <linearGradient id="wallR" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stop-color="#d35400" />
+                                        <stop offset="100%" stop-color="#a04000" />
+                                    </linearGradient>
+                                    <linearGradient id="rampG" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#f5cba7" />
+                                        <stop offset="100%" stop-color="#af601a" />
+                                    </linearGradient>
+                                    <linearGradient id="nestLid" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#f1948a" />
+                                        <stop offset="100%" stop-color="#922b21" />
+                                    </linearGradient>
+                                </defs>
+                                
+                                <!-- Ground Shadow -->
+                                <ellipse cx="50" cy="82" rx="42" ry="14" fill="url(#coopShadow)" />
+                                
+                                <!-- Legs/Posts -->
+                                <rect x="25" y="66" width="4" height="12" fill="#4a2810" />
+                                <rect x="48" y="78" width="4" height="10" fill="#4a2810" />
+                                <rect x="71" y="66" width="4" height="12" fill="#4a2810" />
+
+                                <!-- Ramp -->
+                                <polygon points="56,72 70,86 78,82 64,68" fill="url(#rampG)" stroke="#5c330a" stroke-width="1" />
+                                <line x1="59" y1="75" x2="65" y2="72" stroke="#5c330a" stroke-width="1.5" />
+                                <line x1="63" y1="79" x2="69" y2="76" stroke="#5c330a" stroke-width="1.5" />
+                                <line x1="67" y1="83" x2="73" y2="80" stroke="#5c330a" stroke-width="1.5" />
+
+                                <!-- Left Coop Wall -->
+                                <polygon points="20,48 50,62 50,80 20,66" fill="url(#wallL)" stroke="#3e2723" stroke-width="1.5" />
+                                <!-- Right Coop Wall -->
+                                <polygon points="50,62 80,48 80,66 50,80" fill="url(#wallR)" stroke="#3e2723" stroke-width="1.5" />
+
+                                <!-- Hanging Nesting Box -->
+                                <polygon points="12,60 20,64 20,72 12,68" fill="#5c330a" stroke="#3e2723" stroke-width="1" />
+                                <polygon points="20,64 27,61 27,69 20,72" fill="#8b5a2b" stroke="#3e2723" stroke-width="1" />
+                                <polygon points="12,60 20,64 27,61 19,57" fill="url(#nestLid)" stroke="#3e2723" stroke-width="1" />
+                                <!-- Little eggs inside nesting box (nesting box straw) -->
+                                <text x="18" y="68" font-size="6">🌾</text>
+                                <circle cx="21" cy="69" r="1.5" fill="#fff" stroke="#d5dbdb" stroke-width="0.5" />
+                                <circle cx="23" cy="67" r="1.5" fill="#fff" stroke="#d5dbdb" stroke-width="0.5" />
+
+                                <!-- Door on Right Wall -->
+                                <polygon points="56,66 68,60 68,72 56,78" fill="#2c1605" stroke="#1c0d02" stroke-width="1.2" />
+
+                                <!-- Left Roof Facet -->
+                                <polygon points="15,48 50,22 50,62" fill="url(#roofLeft)" stroke="#3e2723" stroke-width="1.5" />
+                                <!-- Right Roof Facet -->
+                                <polygon points="50,22 85,48 50,62" fill="url(#roofRight)" stroke="#3e2723" stroke-width="1.5" />
+
+                                <!-- Window on Left Wall -->
+                                <polygon points="28,56 42,62 42,54 28,48" fill="#fcf3cf" stroke="#3e2723" stroke-width="1" />
+                                <line x1="35" y1="52" x2="35" y2="60" stroke="#3e2723" stroke-width="0.75" />
+                                <line x1="28" y1="52" x2="42" y2="58" stroke="#3e2723" stroke-width="0.75" />
+
+                                <!-- Little chicken emoji peeking out of door! -->
+                                <text x="56" y="72" font-size="11">🐥</text>
+                            </svg>
+                            <div class="building-tooltip">🐔 Chuồng Gà</div>
+                        </div>
+
+                        <!-- Cow Pen -->
+                        <div id="cow-pen" class="farm-building clickable-building" style="left: 70%; top: 18%;">
+                            <svg viewBox="0 0 120 90" width="120" height="90">
+                                <defs>
+                                    <radialGradient id="penShadowGrad" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="rgba(0,0,0,0.4)" />
+                                        <stop offset="100%" stop-color="rgba(0,0,0,0)" />
+                                    </radialGradient>
+                                    <linearGradient id="grassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stop-color="#9ccc65" />
+                                        <stop offset="50%" stop-color="#7cb342" />
+                                        <stop offset="100%" stop-color="#558b2f" />
+                                    </linearGradient>
+                                    <linearGradient id="postLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#8d6e63" />
+                                        <stop offset="100%" stop-color="#5d4037" />
+                                    </linearGradient>
+                                    <linearGradient id="postRight" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#a1887f" />
+                                        <stop offset="100%" stop-color="#6d4c41" />
+                                    </linearGradient>
+                                    <linearGradient id="troughLeft" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stop-color="#5c330a" />
+                                        <stop offset="100%" stop-color="#3e2723" />
+                                    </linearGradient>
+                                    <linearGradient id="troughRight" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stop-color="#8b5a2b" />
+                                        <stop offset="100%" stop-color="#5c330a" />
+                                    </linearGradient>
+                                </defs>
+                                <!-- Base Shadow -->
+                                <polygon points="60,35 110,60 60,85 10,60" fill="url(#penShadowGrad)" />
+                                <!-- Grass Patch -->
+                                <polygon points="60,37 106,60 60,83 14,60" fill="url(#grassGrad)" stroke="#33691e" stroke-width="2" />
+                                
+                                <!-- Little Flowers on the pasture -->
+                                <circle cx="32" cy="52" r="1.5" fill="#fff" />
+                                <circle cx="32" cy="52" r="0.6" fill="#ffeb3b" />
+                                <circle cx="48" cy="72" r="1.5" fill="#f48fb1" />
+                                <circle cx="48" cy="72" r="0.6" fill="#f8bbd0" />
+                                <circle cx="78" cy="62" r="1.5" fill="#fff" />
+                                <circle cx="78" cy="62" r="0.6" fill="#ffeb3b" />
+                                <circle cx="90" cy="54" r="1.5" fill="#ffe082" />
+                                <circle cx="90" cy="54" r="0.6" fill="#ffb300" />
+                                
+                                <!-- Back-Left Fence Rails -->
+                                <polygon points="14,54 60,31 60,33 14,56" fill="#5d4037" stroke="#3e2723" stroke-width="0.5" />
+                                <polygon points="14,48 60,25 60,27 14,50" fill="#5d4037" stroke="#3e2723" stroke-width="0.5" />
+                                
+                                <!-- Back-Right Fence Rails -->
+                                <polygon points="60,31 106,54 106,56 60,33" fill="#6d4c41" stroke="#3e2723" stroke-width="0.5" />
+                                <polygon points="60,25 106,48 106,50 60,27" fill="#6d4c41" stroke="#3e2723" stroke-width="0.5" />
+
+                                <!-- Front-Left Fence Rails -->
+                                <polygon points="14,56 60,79 60,81 14,58" fill="#5d4037" stroke="#3e2723" stroke-width="0.5" />
+                                <polygon points="14,50 60,73 60,75 14,52" fill="#5d4037" stroke="#3e2723" stroke-width="0.5" />
+
+                                <!-- Front-Right Fence Rails -->
+                                <polygon points="60,79 106,56 106,58 60,81" fill="#6d4c41" stroke="#3e2723" stroke-width="0.5" />
+                                <polygon points="60,73 106,50 106,52 60,75" fill="#6d4c41" stroke="#3e2723" stroke-width="0.5" />
+
+                                <!-- 3D Fence Posts -->
+                                <!-- Left Post (14, 60) -->
+                                <polygon points="14,60 16,59 16,46 14,47" fill="url(#postLeft)" stroke="#3e2723" stroke-width="0.75" />
+                                <polygon points="12,59 14,60 14,47 12,46" fill="url(#postRight)" stroke="#3e2723" stroke-width="0.75" />
+
+                                <!-- Mid-Back-Left Post (37, 48) -->
+                                <polygon points="37,48 39,47 39,34 37,35" fill="url(#postLeft)" stroke="#3e2723" stroke-width="0.75" />
+                                <polygon points="35,47 37,48 37,35 35,34" fill="url(#postRight)" stroke="#3e2723" stroke-width="0.75" />
+
+                                <!-- Mid-Front-Left Post (37, 71) -->
+                                <polygon points="37,71 39,70 39,57 37,58" fill="url(#postLeft)" stroke="#3e2723" stroke-width="0.75" />
+                                <polygon points="35,70 37,71 37,58 35,57" fill="url(#postRight)" stroke="#3e2723" stroke-width="0.75" />
+
+                                <!-- Bottom Post (60, 83) -->
+                                <polygon points="60,83 62,82 62,69 60,70" fill="url(#postLeft)" stroke="#3e2723" stroke-width="0.75" />
+                                <polygon points="58,82 60,83 60,70 58,69" fill="url(#postRight)" stroke="#3e2723" stroke-width="0.75" />
+
+                                <!-- Mid-Front-Right Post (83, 71) -->
+                                <polygon points="83,71 85,70 85,57 83,58" fill="url(#postLeft)" stroke="#3e2723" stroke-width="0.75" />
+                                <polygon points="81,70 83,71 83,58 81,57" fill="url(#postRight)" stroke="#3e2723" stroke-width="0.75" />
+
+                                <!-- Mid-Back-Right Post (83, 48) -->
+                                <polygon points="83,48 85,47 85,34 83,35" fill="url(#postLeft)" stroke="#3e2723" stroke-width="0.75" />
+                                <polygon points="81,47 83,48 83,35 81,34" fill="url(#postRight)" stroke="#3e2723" stroke-width="0.75" />
+
+                                <!-- Right Post (106, 60) -->
+                                <polygon points="106,60 108,59 108,46 106,47" fill="url(#postLeft)" stroke="#3e2723" stroke-width="0.75" />
+                                <polygon points="104,59 106,60 106,47 104,46" fill="url(#postRight)" stroke="#3e2723" stroke-width="0.75" />
+
+                                <!-- 2.5D Feeding Trough -->
+                                <polygon points="40,55 52,61 52,67 40,61" fill="url(#troughLeft)" stroke="#3e2723" stroke-width="1" />
+                                <polygon points="52,61 64,55 64,61 52,67" fill="url(#troughRight)" stroke="#3e2723" stroke-width="1" />
+                                <polygon points="40,55 52,61 64,55 52,49" fill="#2c1605" stroke="#3e2723" stroke-width="1" />
+                                <polygon points="42,55 52,60 62,55 52,51" fill="#ffeb3b" />
+                                <text x="70" y="58" font-size="9">🌾</text>
+
+                                <!-- 2.5D Milk Bucket -->
+                                <ellipse cx="92" cy="68" rx="4" ry="2" fill="#b0bec5" stroke="#37474f" stroke-width="0.75" />
+                                <path d="M 88 68 L 89 74 Q 92 76 95 74 L 96 68 Z" fill="#cfd8dc" stroke="#37474f" stroke-width="0.75" />
+                                <ellipse cx="92" cy="68" rx="3.5" ry="1.5" fill="#90a4ae" />
+                                <path d="M 88 68 Q 92 63 96 68" fill="none" stroke="#37474f" stroke-width="0.75" />
+                            </svg>
+                            <div class="building-tooltip">🐄 Chuồng Bò</div>
+                        </div>
+
+                        <div id="quest-building" class="farm-building clickable-building">
+                            <svg viewBox="0 0 100 100" width="85" height="85">
+                                <!-- Shadow -->
+                                <ellipse cx="50" cy="85" rx="28" ry="8" fill="rgba(0,0,0,0.2)" />
+
+                                <!-- Posts -->
+                                <rect x="35" y="48" width="6" height="35" fill="#5c330a" stroke="#2c1605"
+                                    stroke-width="1" />
+                                <rect x="62" y="40" width="6" height="40" fill="#8b5a2b" stroke="#2c1605"
+                                    stroke-width="1" />
+
+                                <!-- Board Backing -->
+                                <polygon points="20,25 25,22 25,52 20,55" fill="#5c330a" />
+                                <polygon points="25,22 78,38 78,58 25,42" fill="#cd853f" stroke="#5c330a"
+                                    stroke-width="2" />
+                                <polygon points="20,25 25,22 78,38 73,41" fill="#a0522d" />
+
+                                <!-- Notice Paper -->
+                                <polygon points="32,27 70,38 70,52 32,41" fill="#fcf3cf" stroke="#f5b041"
+                                    stroke-width="1" />
+
+                                <!-- Notice lines -->
+                                <line x1="38" y1="32" x2="64" y2="40" stroke="#b55d14" stroke-width="1.5"
+                                    stroke-linecap="round" />
+                                <line x1="38" y1="37" x2="58" y2="43" stroke="#b55d14" stroke-width="1.5"
+                                    stroke-linecap="round" />
+                                <line x1="38" y1="42" x2="62" y2="49" stroke="#b55d14" stroke-width="1.5"
+                                    stroke-linecap="round" />
+
+                                <!-- Red Pin -->
+                                <circle cx="51" cy="30" r="3.5" fill="#e74c3c" stroke="#c0392b" stroke-width="0.5" />
+                                <ellipse cx="51" cy="32" rx="2" ry="1" fill="#000" opacity="0.3" />
+                            </svg>
+                            <div class="building-tooltip">📋 Nhiệm Vụ</div>
+                        </div>
+
+                        <div id="achieve-building" class="farm-building clickable-building">
+                            <svg viewBox="0 0 100 100" width="80" height="80">
+                                <!-- Base Shadow -->
+                                <ellipse cx="50" cy="85" rx="25" ry="10" fill="rgba(0,0,0,0.2)" />
+
+                                <!-- Pedestal Column -->
+                                <polygon points="35,60 50,68 50,85 35,77" fill="#7f8c8d" stroke="#34495e"
+                                    stroke-width="1.5" />
+                                <polygon points="50,68 65,60 65,77 50,85" fill="#b2babb" stroke="#34495e"
+                                    stroke-width="1.5" />
+                                <polygon points="35,60 50,53 65,60 50,67" fill="#bdc3c7" stroke="#34495e"
+                                    stroke-width="1.5" />
+
+                                <!-- Golden Trophy -->
+                                <g transform="translate(0, 5)">
+                                    <!-- Trophy Base -->
+                                    <polygon points="42,48 50,52 58,48 50,44" fill="#a04000" />
+                                    <polygon points="42,48 50,52 50,55 42,51" fill="#5e2700" />
+                                    <polygon points="50,52 58,48 58,51 50,55" fill="#783400" />
+
+                                    <!-- Stem -->
+                                    <rect x="47" y="32" width="6" height="13" fill="#f39c12" />
+                                    <rect x="50" y="32" width="3" height="13" fill="#f1c40f" />
+
+                                    <!-- Cup Body -->
+                                    <path d="M 36 18 L 64 18 L 57 32 L 43 32 Z" fill="#f1c40f" />
+                                    <path d="M 50 18 L 64 18 L 57 32 L 50 32 Z" fill="#f39c12" />
+
+                                    <!-- Handles -->
+                                    <path d="M 36 20 Q 28 25 38 29" fill="none" stroke="#f1c40f" stroke-width="2.5"
+                                        stroke-linecap="round" />
+                                    <path d="M 64 20 Q 72 25 62 29" fill="none" stroke="#f1c40f" stroke-width="2.5"
+                                        stroke-linecap="round" />
+
+                                    <!-- Shiny White Star on Cup -->
+                                    <polygon
+                                        points="50,20 51.5,23.5 55,23.5 52,25.5 53.5,29 50,27 46.5,29 48,25.5 45,23.5 48.5,23.5"
+                                        fill="#fff" />
+                                </g>
+                            </svg>
+                            <div class="building-tooltip">🏆 Thành Tích</div>
+                        </div>
+
+                        <div id="signpost-building" class="farm-building clickable-building" style="left: 36%; top: 12%;">
+                            <svg viewBox="0 0 100 100" width="90" height="90">
+                                <!-- Shadow -->
+                                <ellipse cx="50" cy="88" rx="22" ry="7" fill="rgba(0,0,0,0.25)" />
+                                <!-- Wooden Post -->
+                                <rect x="47" y="45" width="6" height="40" fill="#5c330a" stroke="#2c1605" stroke-width="1.5" />
+                                <!-- Wooden Signboard -->
+                                <rect x="10" y="15" width="80" height="30" rx="4" fill="#a0522d" stroke="#5c330a" stroke-width="2.5" />
+                                <!-- Screws/Nails -->
+                                <circle cx="50" cy="21" r="2.2" fill="#7f8c8d" />
+                                <circle cx="50" cy="39" r="2.2" fill="#7f8c8d" />
+                                <!-- Sign text -->
+                                <text x="50" y="34" font-family="'Outfit', sans-serif" font-size="9" font-weight="bold" fill="#fcf3cf" text-anchor="middle" id="signpost-text">My Farm</text>
+                            </svg>
+                            <div class="building-tooltip">🪧 Đặt Tên Nông Trại</div>
+                        </div>
+
+                        <div id="pig-pen" class="farm-building clickable-building" style="left: 80%; top: 62%;">
+                            <div class="pig-pen-ground"></div>
+                            <div class="pig-pen-fence">&#x1FAB5;</div>
+                            <div class="building-tooltip">🐖 Chuồng Heo</div>
+                        </div>
+
+                        <div id="feed-mill-building" class="farm-building clickable-building hide" aria-label="Máy trộn thức ăn">
+                            <div class="feed-mill-shadow"></div>
+                            <div class="feed-mill-body">
+                                <div class="feed-mill-hopper">🌽</div>
+                                <div class="feed-mill-drum">⚙️</div>
+                                <div class="feed-mill-chute"></div>
+                            </div>
+                            <div class="building-tooltip">⚙️ Máy Trộn</div>
+                        </div>
+
+                        <!-- Interactive Game Objects -->
+                        <div id="game-world-objects">
+                            <!-- Farmland Grid Container -->
+                            <div id="farm-grid-container" class="farm-grid-container">
+                                <img src="/assets/farm_grid_clean-uoEHUk3t.png" id="farm-grid-bg" class="farm-grid-bg"
+                                    alt="Farmland">
+                                <div id="farm-grid" class="isometric-grid">
+                                    <!-- Plots will be dynamically generated by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Farmer Character -->
+                            <div id="farmer" class="farmer-character idle" style="left: 45%; top: 40%;">
+                                <div class="farmer-sprite">
+                                    <canvas id="farmer-canvas" width="176" height="342" style="width: 100%; height: 100%;"></canvas>
+                                </div>
+                                <div class="action-bubble">
+                                    <span class="bubble-text">Zzz...</span>
+                                </div>
+                            </div>
+
+                            <!-- Particle Effect Overlay -->
+                            <div id="particle-container"></div>
+                        </div>
+                    </div>
+                    <!-- Decorative items outside the active farm map -->
+                    <div id="decorations-container"></div>
+                </div>
+                <!-- Fog of War Canvas Overlay -->
+                <canvas id="fog-canvas"></canvas>
+
+                <!-- HUD - Top Indicators -->
+                <div id="hud-top">
+                    <!-- Left: Resources -->
+                    <div class="hud-group left">
+                        <div class="hud-item" id="hud-coins" title="Tiền vàng">
+                            <span class="hud-icon coin-icon">🪙</span>
+                            <span id="coin-value" class="hud-value">12,450</span>
+                        </div>
+                        <div class="hud-item" id="hud-gems" title="Kim cương">
+                            <span class="hud-icon gem-icon">💎</span>
+                            <span id="gem-value" class="hud-value">35</span>
+                        </div>
+                        <div class="hud-item" id="hud-energy" title="Năng lượng">
+                            <span class="hud-icon energy-icon">⚡</span>
+                            <div class="energy-bar-wrapper">
+                                <div id="energy-bar-fill" class="energy-bar-fill" style="width: 100%"></div>
+                                <span id="energy-value" class="bar-value">120/120</span>
+                            </div>
+                            <button id="btn-add-energy" class="btn-plus">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Level and Menu -->
+                    <div class="hud-group right">
+                        <div class="hud-item" id="hud-level" title="Cấp độ">
+                            <div class="level-star">
+                                <span class="star-icon">⭐</span>
+                                <span id="level-value">15</span>
+                            </div>
+                            <div class="xp-bar-wrapper">
+                                <div id="xp-bar-fill" class="xp-bar-fill" style="width: 62.5%"></div>
+                                <span id="xp-value" class="bar-value">1,250/2,000</span>
+                            </div>
+                        </div>
+
+                        <!-- Mini utility buttons -->
+                        <div class="utility-buttons">
+                            <button id="btn-mail" class="btn-utility" title="Thư">✉️</button>
+                            <button id="btn-rank" class="btn-utility" title="Bảng xếp hạng">🏆</button>
+                            <button id="btn-antigravity" class="btn-utility" title="Kháng trọng lực">🛸</button>
+                            <button id="btn-settings" class="btn-utility" title="Cài đặt">⚙️</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HUD - Left Sidebar Menu -->
+                <div id="hud-left-menu">
+                    <button class="menu-btn active" id="btn-shop-menu" data-target="shop">
+                        <span class="menu-btn-icon">🏪</span>
+                        <span class="menu-btn-text">Cửa Hàng</span>
+                    </button>
+                    <button class="menu-btn" id="btn-inventory-menu" data-target="inventory">
+                        <span class="menu-btn-icon">🎒</span>
+                        <span class="menu-btn-text">Kho Đồ</span>
+                    </button>
+                    <button class="menu-btn" id="btn-quests-menu" data-target="quests">
+                        <span class="menu-btn-icon">📋</span>
+                        <span class="menu-btn-text">Nhiệm Vụ</span>
+                        <span id="quest-badge" class="badge hide">0</span>
+                    </button>
+                    <button class="menu-btn" id="btn-achieve-menu" data-target="achievements">
+                        <span class="menu-btn-icon">🏆</span>
+                        <span class="menu-btn-text">Thành Tích</span>
+                    </button>
+                    <button class="menu-btn" id="btn-stats-menu" data-target="stats">
+                        <span class="menu-btn-icon">📊</span>
+                        <span class="menu-btn-text">Thống Kê</span>
+                    </button>
+                    <button class="menu-btn" id="btn-pets-menu" data-target="pets">
+                        <span class="menu-btn-icon">🐾</span>
+                        <span class="menu-btn-text">Thú Cưng</span>
+                    </button>
+                </div>
+
+                <!-- HUD - Bottom Controls -->
+                <div id="hud-bottom-right">
+                    <button class="circle-btn" id="btn-harvest-all" title="Thu hoạch tất cả cây chín" style="position: relative;">
+                        <span class="circle-btn-icon">🌾</span>
+                        <span class="circle-btn-text">Gặt Hết</span>
+                        <span id="harvest-all-badge" class="badge hide">0</span>
+                    </button>
+                    <button class="circle-btn" id="btn-design" title="Chỉnh sửa nông trại">
+                        <span class="circle-btn-icon">🛠️</span>
+                        <span class="circle-btn-text">Thiết Kế</span>
+                    </button>
+                    <button class="circle-btn" id="btn-pave-mode" title="Chế độ lót đường đất">
+                        <span class="circle-btn-icon">🟫</span>
+                        <span class="circle-btn-text">Đường Đất</span>
+                    </button>
+                    <button class="circle-btn" id="btn-map" title="Bản đồ">
+                        <span class="circle-btn-icon">🗺️</span>
+                        <span class="circle-btn-text">Bản Đồ</span>
+                    </button>
+                    <button class="circle-btn" id="btn-market" title="Chợ nông sản">
+                        <span class="circle-btn-icon">🏪</span>
+                        <span class="circle-btn-text">Chợ</span>
+                    </button>
+                </div>
+
+                <!-- Selected Crop Detail Bar (Bottom Center) -->
+                <div id="crop-detail-panel" class="detail-panel hide">
+                    <button id="btn-close-crop-detail" class="crop-detail-close" type="button" aria-label="Đóng bảng phân bón">×</button>
+                    <div class="detail-content">
+                        <img id="detail-crop-icon" src="" alt="crop icon">
+                        <div class="detail-text">
+                            <h3 id="detail-crop-name">Carrot</h3>
+                            <span id="detail-crop-timer">⏳ 00:05:30</span>
+                        </div>
+                        <div class="fertilizer-controls" id="fertilizer-controls">
+                            <button class="fertilizer-btn" id="btn-fertilizer-mid" title="Phân bón Trung cấp (Nhanh 50%)">
+                                <span>🧪 Bón Trung (50%)</span>
+                                <span id="mid-fertilizer-count">x0</span>
+                            </button>
+                            <button class="fertilizer-btn" id="btn-fertilizer-high" title="Phân bón Cao cấp (Chín ngay)">
+                                <span>💎 Bón Cao (100%)</span>
+                                <span id="high-fertilizer-count">x0</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POPUP: Seed Selector (Carrot, Corn, Tomato, Pumpkin) -->
+            <div id="seed-popup" class="popover hide">
+                <div class="popover-arrow"></div>
+                <button id="btn-close-seed-popup" class="popover-close">×</button>
+                <div class="popover-header">Chọn hạt giống</div>
+                <div class="seed-list">
+                    <!-- Seed items will be dynamic but follow format below -->
+                    <div class="seed-row">
+                        <button class="seed-item" data-seed="carrot">
+                            <div class="seed-icon-wrapper">🥕</div>
+                            <div class="seed-info">
+                                <span class="seed-name">Cà rốt</span>
+                                <span class="seed-count" id="count-carrot">x10</span>
+                            </div>
+                        </button>
+                        <button class="btn-plant-all" data-seed="carrot" title="Trồng vào tất cả ô đất trống">Tất
+                            cả</button>
+                    </div>
+                    <div class="seed-row">
+                        <button class="seed-item" data-seed="corn">
+                            <div class="seed-icon-wrapper">🌽</div>
+                            <div class="seed-info">
+                                <span class="seed-name">Ngô</span>
+                                <span class="seed-count" id="count-corn">x8</span>
+                            </div>
+                        </button>
+                        <button class="btn-plant-all" data-seed="corn" title="Trồng vào tất cả ô đất trống">Tất
+                            cả</button>
+                    </div>
+                    <div class="seed-row">
+                        <button class="seed-item" data-seed="tomato">
+                            <div class="seed-icon-wrapper">🍅</div>
+                            <div class="seed-info">
+                                <span class="seed-name">Cà chua</span>
+                                <span class="seed-count" id="count-tomato">x5</span>
+                            </div>
+                        </button>
+                        <button class="btn-plant-all" data-seed="tomato" title="Trồng vào tất cả ô đất trống">Tất
+                            cả</button>
+                    </div>
+                    <div class="seed-row">
+                        <button class="seed-item" data-seed="pumpkin">
+                            <div class="seed-icon-wrapper">🎃</div>
+                            <div class="seed-info">
+                                <span class="seed-name">Bí ngô</span>
+                                <span class="seed-count" id="count-pumpkin">x3</span>
+                            </div>
+                        </button>
+                        <button class="btn-plant-all" data-seed="pumpkin" title="Trồng vào tất cả ô đất trống">Tất
+                            cả</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Cửa Hàng (Shop) -->
+            <div id="modal-shop" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism">
+                    <div class="modal-header">
+                        <h2>🏪 CỬA HÀNG HẠT GIỐNG</h2>
+                        <button class="modal-close" data-close="shop">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="shop-tabs">
+                            <button class="shop-tab active" data-tab="buy">Mua Hạt Giống</button>
+                            <button class="shop-tab" data-tab="sell">Bán Nông Sản</button>
+                        </div>
+                        <div id="shop-buy-list" class="shop-grid">
+                            <!-- JS will populate shop cards here -->
+                        </div>
+                        <div id="shop-sell-list" class="shop-grid hide">
+                            <!-- JS will populate sell cards here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Kho Đồ (Inventory) -->
+            <div id="modal-inventory" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism">
+                    <div class="modal-header">
+                        <h2>🎒 KHO ĐỒ NÔNG TRẠI</h2>
+                        <button class="modal-close" data-close="inventory">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="inventory-section">
+                            <h3>Hạt Giống Đang Có</h3>
+                            <div id="inv-seeds-grid" class="inventory-grid"></div>
+                        </div>
+                        <hr class="modal-divider">
+                        <div class="inventory-section">
+                            <h3>Nông Sản Đã Thu Hoạch</h3>
+                            <div id="inv-crops-grid" class="inventory-grid"></div>
+                        </div>
+                        <hr class="modal-divider">
+                        <div class="inventory-section">
+                            <h3>Phân Bón Nông Nghiệp</h3>
+                            <div id="inv-fertilizers-grid" class="inventory-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Nhiệm Vụ (Quests) -->
+            <div id="modal-quests" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism">
+                    <div class="modal-header">
+                        <h2>📋 NHIỆM VỤ NÔNG TRẠI</h2>
+                        <button class="modal-close" data-close="quests">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="weekly-board-strip">
+                            <div>
+                                <span class="weekly-label">Điểm tuần</span>
+                                <strong id="weekly-score">0 điểm</strong>
+                            </div>
+                            <div>
+                                <span class="weekly-label">Còn lại</span>
+                                <strong id="weekly-reset">--</strong>
+                            </div>
+                        </div>
+                        <div id="weekly-milestones" class="weekly-milestones"></div>
+                        <div id="quest-list" class="order-container">
+                            <!-- Delivery orders populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Thành Tích (Achievements) -->
+            <!-- MODAL: Weekly Leaderboard -->
+            <div id="modal-leaderboard" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism leaderboard-modal">
+                    <div class="modal-header">
+                        <h2>BẢNG XẾP HẠNG CẤP ĐỘ</h2>
+                        <button class="modal-close" data-close="leaderboard">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="leaderboard-summary">
+                            <div>
+                                <span class="weekly-label">Hạng của bạn</span>
+                                <strong id="leaderboard-my-rank">--</strong>
+                            </div>
+                            <div>
+                                <span class="weekly-label">Xếp theo</span>
+                                <strong id="leaderboard-reset">Cấp độ &amp; XP</strong>
+                            </div>
+                        </div>
+                        <div id="rank-reward-panel" class="rank-reward-panel"></div>
+                        <div id="leaderboard-list" class="leaderboard-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modal-achievements" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism">
+                    <div class="modal-header">
+                        <h2>🏆 THÀNH TÍCH ĐẠT ĐƯỢC</h2>
+                        <button class="modal-close" data-close="achievements">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="achievement-list" class="achievement-container">
+                            <!-- Achievements populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Thống Kê (Stats) -->
+            <div id="modal-stats" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism">
+                    <div class="modal-header">
+                        <h2>📊 THỐNG KÊ NÔNG TRẠI</h2>
+                        <button class="modal-close" data-close="stats">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="stats-grid">
+                            <div class="stats-card">
+                                <span class="stats-label">Tổng số cây đã trồng:</span>
+                                <span id="stats-planted" class="stats-value">0</span>
+                            </div>
+                            <div class="stats-card">
+                                <span class="stats-label">Tổng số nông sản thu hoạch:</span>
+                                <span id="stats-harvested" class="stats-value">0</span>
+                            </div>
+                            <div class="stats-card">
+                                <span class="stats-label">Tổng số tiền đã kiếm:</span>
+                                <span id="stats-coins-earned" class="stats-value">0</span>
+                            </div>
+                            <div class="stats-card">
+                                <span class="stats-label">Tổng số tiền đã tiêu:</span>
+                                <span id="stats-coins-spent" class="stats-value">0</span>
+                            </div>
+                            <div class="stats-card font-highlight">
+                                <span class="stats-label">Thời gian làm nông:</span>
+                                <span id="stats-time-played" class="stats-value">0 phút</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Thú Cưng (Pets) -->
+            <div id="modal-pets" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism">
+                    <div class="modal-header">
+                        <h2>🐾 THÚ CƯNG CỦA BẠN</h2>
+                        <button class="modal-close" data-close="pets">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="pets-container">
+                            <div class="pet-card active">
+                                <div class="pet-avatar">🐕</div>
+                                <div class="pet-details">
+                                    <h3>Cún Shiba</h3>
+                                    <p>Trông coi nông trại và nhặt tiền vàng rơi rớt.</p>
+                                    <span class="pet-status">Đang hoạt động</span>
+                                </div>
+                            </div>
+                            <div class="pet-card locked">
+                                <div class="pet-avatar">🐈</div>
+                                <div class="pet-details">
+                                    <h3>Mèo Tam Thể</h3>
+                                    <p>Tăng 10% năng lượng hồi phục mỗi phút.</p>
+                                    <button class="btn-unlock-pet">Mở khóa: 50 💎</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Cài Đặt (Settings) -->
+            <div id="modal-settings" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism">
+                    <div class="modal-header">
+                        <h2>⚙️ CÀI ĐẶT GAME</h2>
+                        <button class="modal-close" data-close="settings">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="settings-options">
+                            <section class="account-settings-section">
+                                <h3>👤 Thông Tin Cá Nhân</h3>
+                                <form id="profile-settings-form" class="account-settings-form">
+                                    <label>
+                                        Mã tài khoản
+                                        <input id="profile-account-id" type="text" readonly>
+                                    </label>
+                                    <label>
+                                        Email
+                                        <input id="profile-email" name="email" type="email" autocomplete="email" maxlength="255" required>
+                                    </label>
+                                    <label class="account-field-wide">
+                                        Tên nông trại
+                                        <input id="profile-farm-name" name="farmName" type="text" maxlength="32" required>
+                                    </label>
+                                    <button class="auth-submit account-field-wide" type="submit">Lưu thông tin</button>
+                                </form>
+                                <div id="profile-settings-message" class="account-settings-message hide"></div>
+                            </section>
+                            <hr class="modal-divider">
+                            <section class="account-settings-section">
+                                <h3>🔒 Đổi Mật Khẩu</h3>
+                                <form id="password-settings-form" class="account-settings-form">
+                                    <label class="account-field-wide">
+                                        Mật khẩu hiện tại
+                                        <input name="currentPassword" type="password" autocomplete="current-password" required>
+                                    </label>
+                                    <label>
+                                        Mật khẩu mới
+                                        <input name="newPassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" required>
+                                    </label>
+                                    <label>
+                                        Nhập lại mật khẩu mới
+                                        <input name="confirmPassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" required>
+                                    </label>
+                                    <button class="auth-submit account-field-wide" type="submit">Đổi mật khẩu</button>
+                                </form>
+                                <div id="password-settings-message" class="account-settings-message hide"></div>
+                            </section>
+                            <hr class="modal-divider">
+                            <div class="setting-row">
+                                <span>Âm thanh hiệu ứng (SFX)</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-sfx" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <span>Nhạc nền (BGM)</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-bgm">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <hr class="modal-divider">
+                            <button id="btn-logout" class="btn-logout-account" type="button">🚪 Đăng Xuất Tài Khoản</button>
+                            <button id="btn-reset-game" class="btn-danger">Reset Dữ Liệu Game</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Prompt Dialog -->
+            <div id="modal-custom-prompt" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism dialog-modal">
+                    <div class="modal-header">
+                        <h2 id="custom-prompt-title">🏷️ ĐỔI TÊN NÔNG TRẠI</h2>
+                        <button class="modal-close" id="btn-custom-prompt-close">×</button>
+                    </div>
+                    <div class="modal-body dialog-body">
+                        <p id="custom-prompt-message" class="dialog-message">Nhập tên nông trại mới của bạn (tối đa 15 ký tự):</p>
+                        <input type="text" id="custom-prompt-input" class="dialog-input" maxlength="15">
+                        <div class="dialog-buttons">
+                            <button id="btn-custom-prompt-ok" class="rect-btn success dialog-btn">Xác Nhận</button>
+                            <button id="btn-custom-prompt-cancel" class="rect-btn danger dialog-btn">Hủy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Confirm Dialog -->
+            <div id="modal-custom-confirm" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism dialog-modal">
+                    <div class="modal-header">
+                        <h2 id="custom-confirm-title">❔ XÁC NHẬN</h2>
+                        <button class="modal-close" id="btn-custom-confirm-close">×</button>
+                    </div>
+                    <div class="modal-body dialog-body">
+                        <p id="custom-confirm-message" class="dialog-message">Bạn có chắc chắn muốn thực hiện hành động này không?</p>
+                        <div class="dialog-buttons">
+                            <button id="btn-custom-confirm-ok" class="rect-btn success dialog-btn">Đồng Ý</button>
+                            <button id="btn-custom-confirm-cancel" class="rect-btn danger dialog-btn">Hủy Bỏ</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Land Purchase Dialog -->
+            <div id="modal-land-purchase" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism dialog-modal land-purchase-modal">
+                    <div class="modal-header">
+                        <h2 id="land-purchase-title">Mua ô đất</h2>
+                        <button class="modal-close" id="btn-land-buy-close">×</button>
+                    </div>
+                    <div class="modal-body dialog-body">
+                        <p id="land-purchase-message" class="dialog-message">Kiểm tra cấp để mở rộng nông trại.</p>
+                        <div class="land-purchase-summary">
+                            <span class="land-purchase-icon">🪧</span>
+                            <span>Chọn vàng hoặc kim cương để mở khóa ô đất mới.</span>
+                        </div>
+                        <div class="dialog-buttons land-purchase-buttons">
+                            <button id="btn-land-buy-gold" class="rect-btn success dialog-btn land-pay-btn">Mua bằng Vàng</button>
+                            <button id="btn-land-buy-gems" class="rect-btn success dialog-btn land-pay-btn gem-pay">Mua bằng KC</button>
+                            <button id="btn-land-buy-cancel" class="rect-btn danger dialog-btn">Hủy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modal-feed-mill" class="modal hide">
+                <div class="modal-overlay"></div>
+                <div class="modal-content glassmorphism feed-mill-modal">
+                    <div class="modal-header">
+                        <h2>⚙️ MÁY TRỘN THỨC ĂN</h2>
+                        <button class="modal-close" data-close="feed-mill">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="feed-mill-panel" class="shop-panel">
+                            <div id="feed-mill-status" class="feed-mill-status"></div>
+                            <div id="feed-recipe-list" class="shop-grid feed-recipe-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Notification Banner -->
+            <div id="notification-toast" class="toast hide">
+                <span id="toast-message">Chào mừng quay lại nông trại!</span>
+            </div>
+
+            <!-- Design Mode HUD overlays -->
+            <div id="design-banner" class="design-hud-overlay hide">
+                <span>🛠️ CHẾ ĐỘ THIẾT KẾ: Kéo thả Nhà, Chuồng, Vườn hoặc Cây cối để sắp xếp</span>
+            </div>
+            <div id="design-controls" class="design-hud-overlay hide">
+                <div id="design-feed-mill-tray" class="design-placement-tray hide">
+                    <span>Vật phẩm chưa đặt</span>
+                    <button id="design-feed-mill-item" type="button" title="Kéo Máy trộn ra nông trại">⚙️ Máy trộn</button>
+                </div>
+                <button id="btn-design-save" class="rect-btn success">Lưu Bố Cục</button>
+                <button id="btn-design-cancel" class="rect-btn danger">Hủy Bỏ</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

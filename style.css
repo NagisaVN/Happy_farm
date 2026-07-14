@@ -315,6 +315,43 @@ body {
     pointer-events: none;
 }
 
+#phaser-game-root {
+    position: absolute;
+    inset: 0;
+    width: 1280px;
+    height: 720px;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+#phaser-game-root canvas {
+    display: block;
+    width: 1280px !important;
+    height: 720px !important;
+    image-rendering: auto;
+}
+
+.phaser-enabled #farm-grid-container,
+.phaser-enabled #farmer,
+.phaser-enabled .pet-dog-character,
+.phaser-enabled .chicken-character,
+.phaser-enabled .cow-character,
+.phaser-enabled #farmhouse-overlay img,
+.phaser-enabled #barn-overlay img,
+.phaser-enabled #shop-building img,
+.phaser-enabled #pet-building img {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.design-active .phaser-enabled #farm-grid-container {
+    opacity: 1;
+}
+
+.design-active .phaser-enabled #farm-grid-container > * {
+    opacity: 0;
+}
+
 /* Decorative elements outside active farm map */
 .decor-outside {
     position: absolute;
@@ -989,7 +1026,7 @@ img.crop-sprite {
     font-family: var(--font-primary);
     cursor: pointer;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     transition: transform 0.2s, background 0.2s, border-color 0.2s, width 0.2s;
 }
 
@@ -1092,26 +1129,55 @@ img.crop-sprite {
     text-shadow: 0 1px 3px rgba(0,0,0,0.6);
 }
 
-/* --- Selected Crop Detail Bar (Bottom Center) --- */
+/* --- Selected Crop Detail Bar (Top Center) --- */
 #crop-detail-panel {
     position: absolute;
-    bottom: 20px;
-    left: 45%;
+    top: 82px;
+    bottom: auto;
+    left: 50%;
     transform: translateX(-50%);
     background: rgba(253, 242, 233, 0.93);
     border: 3px solid #e59866;
     border-radius: 16px;
     padding: 8px 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    z-index: 400;
+    z-index: 550;
     transition: opacity 0.3s ease, transform 0.3s ease;
     color: #5d4037;
 }
 
 #crop-detail-panel.hide {
     opacity: 0;
-    transform: translateX(-50%) translateY(30px);
+    transform: translateX(-50%) translateY(-30px);
     pointer-events: none;
+}
+
+.crop-detail-close {
+    position: absolute;
+    top: -13px;
+    right: -13px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff3e8;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e76f51, #c44536);
+    color: #fff;
+    font: 800 20px/1 Arial, sans-serif;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+    z-index: 2;
+}
+
+.crop-detail-close:hover {
+    filter: brightness(1.1);
+    transform: scale(1.08);
+}
+
+.crop-detail-close:active {
+    transform: scale(0.94);
 }
 
 .detail-content {
@@ -1298,6 +1364,20 @@ img.crop-sprite {
     border-color: #d5dbdb;
     cursor: not-allowed;
     transform: none !important;
+}
+
+.seed-item:disabled .seed-count {
+    color: #8b7d72;
+}
+
+.shop-card.crop-locked {
+    opacity: 0.68;
+    border-color: rgba(189, 195, 199, 0.35);
+    background: rgba(80, 80, 80, 0.18);
+}
+
+.shop-card.crop-locked .card-desc {
+    color: #d5c7b5;
 }
 
 /* --- MODALS (Shop, Inventory, Quests, etc.) --- */
@@ -1853,6 +1933,206 @@ img.crop-sprite {
     background: rgba(46, 204, 113, 0.05);
 }
 
+.weekly-board-strip,
+.leaderboard-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.weekly-board-strip > div,
+.leaderboard-summary > div,
+.rank-reward-panel {
+    background: rgba(0, 0, 0, 0.28);
+    border: 1.5px solid rgba(230, 180, 120, 0.28);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.weekly-label {
+    display: block;
+    color: #f5cba7;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.weekly-milestones {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.milestone-card,
+.order-card,
+.leaderboard-row {
+    background: rgba(0, 0, 0, 0.34);
+    border: 1.5px solid rgba(230, 180, 120, 0.22);
+    border-radius: 12px;
+}
+
+.milestone-card {
+    padding: 10px;
+    min-height: 86px;
+}
+
+.milestone-card.claimable {
+    border-color: #f1c40f;
+    box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.18);
+}
+
+.milestone-card.claimed {
+    border-color: rgba(46, 204, 113, 0.48);
+    background: rgba(46, 204, 113, 0.08);
+}
+
+.milestone-title,
+.order-title {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.milestone-reward,
+.order-reward,
+.leaderboard-meta {
+    color: var(--color-gold);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.order-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.order-card {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 190px;
+}
+
+.order-card.ready {
+    border-color: rgba(46, 204, 113, 0.55);
+}
+
+.order-card.cooldown {
+    opacity: 0.72;
+}
+
+.order-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: #fff;
+}
+
+.order-owned.ok {
+    color: #58d68d;
+}
+
+.order-owned.missing {
+    color: #ff9f8e;
+}
+
+.order-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.order-actions .btn-claim {
+    flex: 1;
+}
+
+.btn-secondary-action {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1.5px solid rgba(230, 180, 120, 0.25);
+    border-radius: 8px;
+    color: #f5cba7;
+    cursor: pointer;
+    font-family: var(--font-primary);
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 8px 10px;
+}
+
+.btn-secondary-action:hover {
+    border-color: rgba(230, 180, 120, 0.55);
+}
+
+.leaderboard-modal {
+    max-width: 680px;
+}
+
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.leaderboard-row {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr) 96px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+}
+
+.leaderboard-row.mine {
+    border-color: #f1c40f;
+    background: rgba(241, 196, 15, 0.08);
+}
+
+.leaderboard-rank {
+    color: #fff;
+    font-weight: 900;
+}
+
+.leaderboard-name {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rank-reward-panel:empty {
+    display: none;
+}
+
+@media (max-width: 720px) {
+    .weekly-board-strip,
+    .leaderboard-summary,
+    .weekly-milestones,
+    .order-container {
+        grid-template-columns: 1fr;
+    }
+
+    .leaderboard-row {
+        grid-template-columns: 44px minmax(0, 1fr) 76px;
+    }
+}
+
 /* Achievements Locked State */
 .achieve-card.locked {
     opacity: 0.65;
@@ -1981,10 +2261,92 @@ img.crop-sprite {
 }
 
 /* Settings Switch Button */
+.shop-flash-badge,.shop-discount-badge{display:inline-block;font-size:.65rem;padding:2px 6px;border-radius:7px;margin-left:5px}.shop-flash-badge{background:#ff7a18;color:#fff}.shop-discount-badge{background:#e83e67;color:#fff}.shop-countdown{display:block;color:#c64d00;font-weight:700;margin-top:4px}.card-price del{opacity:.55;margin-right:4px}
 .settings-options {
     display: flex;
     flex-direction: column;
     gap: 15px;
+}
+
+.account-settings-section {
+    display: grid;
+    gap: 12px;
+}
+
+.account-settings-section h3 {
+    color: var(--color-gold);
+    font-size: 1rem;
+}
+
+.account-settings-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.account-settings-form label {
+    display: grid;
+    gap: 6px;
+    color: #f7e8c7;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.account-settings-form input {
+    width: 100%;
+    height: 40px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(230, 180, 120, 0.35);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    padding: 0 11px;
+    font-family: var(--font-primary);
+    font-size: 0.9rem;
+}
+
+.account-settings-form input:focus {
+    outline: none;
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.15);
+}
+
+.account-settings-form input[readonly] {
+    color: #bba98d;
+    cursor: not-allowed;
+}
+
+.account-field-wide {
+    grid-column: 1 / -1;
+}
+
+.account-settings-message {
+    padding: 9px 11px;
+    border-radius: 8px;
+    background: rgba(46, 204, 113, 0.12);
+    border: 1px solid rgba(46, 204, 113, 0.38);
+    color: #8ff0b8;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.account-settings-message.error {
+    background: rgba(231, 76, 60, 0.12);
+    border-color: rgba(231, 76, 60, 0.42);
+    color: #ffaaa2;
+}
+
+.account-settings-message.hide {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .account-settings-form {
+        grid-template-columns: 1fr;
+    }
+
+    .account-field-wide {
+        grid-column: auto;
+    }
 }
 
 .setting-row {
@@ -2070,6 +2432,28 @@ input:checked + .slider:before {
 }
 
 .btn-danger:active {
+    transform: scale(0.97);
+}
+
+.btn-logout-account {
+    width: 100%;
+    padding: 10px 0;
+    border: 1.5px solid rgba(241, 196, 15, 0.55);
+    border-radius: 8px;
+    background: rgba(241, 196, 15, 0.12);
+    color: #ffe49a;
+    font-family: var(--font-primary);
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+}
+
+.btn-logout-account:hover {
+    background: rgba(241, 196, 15, 0.22);
+}
+
+.btn-logout-account:active {
     transform: scale(0.97);
 }
 
@@ -2519,6 +2903,60 @@ input:checked + .slider:before {
     box-shadow: 0 3px 8px rgba(0,0,0,0.3);
 }
 
+.land-purchase-modal {
+    max-height: 360px;
+}
+
+.land-purchase-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(245, 176, 65, 0.28);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.24);
+    color: #f5e6c8;
+    font-size: 0.86rem;
+    line-height: 1.35;
+}
+
+.land-purchase-icon {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28px;
+    border-radius: 50%;
+    background: rgba(245, 176, 65, 0.22);
+    color: #ffe08a;
+    font-size: 1.25rem;
+    font-weight: 900;
+}
+
+.land-purchase-buttons {
+    flex-wrap: wrap;
+}
+
+#land-purchase-message.requirement-missing {
+    color: #ffb4a8;
+}
+
+.land-pay-btn {
+    min-width: 132px;
+}
+
+.land-pay-btn.gem-pay {
+    background: linear-gradient(135deg, var(--color-gem), var(--color-gem-dark));
+}
+
+.land-pay-btn:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+    filter: grayscale(0.35);
+}
+
 /* --- Pet Dog Character Styles --- */
 .pet-dog-character {
     position: absolute;
@@ -2621,8 +3059,22 @@ input:checked + .slider:before {
     filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));
 }
 
+/* The pen is an HTML decoration while the cows are rendered by Phaser.
+   Keep the decoration below the game canvas so it cannot cover the cows. */
+.phaser-enabled #cow-pen,
+.phaser-enabled #pig-pen {
+    z-index: 0;
+}
+
+.design-active .phaser-enabled #cow-pen,
+.design-active .phaser-enabled #pig-pen {
+    z-index: 2;
+}
+
 .design-active #chicken-coop,
-.design-active #cow-pen {
+.design-active #cow-pen,
+.design-active #pig-pen,
+.design-active #feed-mill-building {
     pointer-events: auto !important;
     cursor: move !important;
     outline: 2px dashed #f1c40f;
@@ -2633,9 +3085,140 @@ input:checked + .slider:before {
 }
 
 .design-active #chicken-coop:hover,
-.design-active #cow-pen:hover {
+.design-active #cow-pen:hover,
+.design-active #pig-pen:hover,
+.design-active #feed-mill-building:hover {
     outline-color: #fff;
     filter: drop-shadow(0 12px 25px rgba(255, 255, 255, 0.6)) !important;
+}
+
+#pig-pen {
+    width: 96px;
+    height: 68px;
+    transform: translate(-50%, -50%);
+}
+
+.pig-pen-ground {
+    position: absolute;
+    inset: 18px 6px 4px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, #9b6a3f 0 45%, #6b4528 72%, transparent 73%);
+    filter: drop-shadow(0 8px 7px rgba(0, 0, 0, 0.3));
+}
+
+.pig-pen-fence {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 4.2rem;
+    transform: rotate(-8deg);
+}
+
+#feed-mill-building {
+    width: 92px;
+    height: 100px;
+    transform: translate(-50%, -75%);
+    z-index: 4;
+}
+
+#feed-mill-building.clickable-building:hover {
+    transform: translate(-50%, -75%) scale(1.05);
+}
+
+#feed-mill-building.clickable-building:active {
+    transform: translate(-50%, -75%) scale(0.97);
+}
+
+#pig-pen.clickable-building:hover {
+    transform: translate(-50%, -50%) scale(1.05);
+}
+
+#pig-pen.clickable-building:active {
+    transform: translate(-50%, -50%) scale(0.97);
+}
+
+.feed-mill-shadow {
+    position: absolute;
+    left: 10px;
+    right: 6px;
+    bottom: 1px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(38, 27, 17, 0.34);
+    filter: blur(3px);
+}
+
+.feed-mill-body {
+    position: absolute;
+    inset: 0;
+    filter: drop-shadow(0 7px 6px rgba(0, 0, 0, 0.35));
+}
+
+.feed-mill-hopper {
+    position: absolute;
+    left: 22px;
+    top: 3px;
+    width: 48px;
+    height: 35px;
+    display: grid;
+    place-items: center;
+    border: 4px solid #6d4c41;
+    border-radius: 8px 8px 18px 18px;
+    background: linear-gradient(135deg, #f4d03f, #d68910);
+    font-size: 1.5rem;
+}
+
+.feed-mill-drum {
+    position: absolute;
+    left: 17px;
+    top: 32px;
+    width: 58px;
+    height: 51px;
+    display: grid;
+    place-items: center;
+    border: 5px solid #5d4037;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #cfd8dc, #78909c);
+    font-size: 2rem;
+}
+
+.feed-mill-chute {
+    position: absolute;
+    right: 4px;
+    top: 59px;
+    width: 31px;
+    height: 16px;
+    border: 4px solid #5d4037;
+    border-left: 0;
+    transform: rotate(18deg);
+    background: #b0bec5;
+}
+
+.design-placement-tray {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 2px dashed #f1c40f;
+    border-radius: 12px;
+    background: rgba(40, 28, 18, 0.88);
+    color: #fff4ca;
+    font-size: 0.78rem;
+}
+
+.design-placement-tray button {
+    border: 1px solid #f5d76e;
+    border-radius: 9px;
+    padding: 7px 10px;
+    background: linear-gradient(#f7dc6f, #d4ac0d);
+    color: #3e2b14;
+    font-weight: 800;
+    cursor: grab;
+}
+
+.feed-mill-modal {
+    width: min(760px, 92vw);
 }
 
 /* --- Chicken Character Styles --- */

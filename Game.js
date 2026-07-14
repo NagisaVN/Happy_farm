@@ -1,12 +1,25 @@
 import { CROP_CONFIGS } from './Seed.js';
-import { Inventory } from './Inventory.js';
+import { DEFAULT_STATE, FEED_RECIPES, Inventory } from './Inventory.js';
 import { Farmer } from './Farmer.js';
 import { FarmTile } from './FarmTile.js';
 import { Dog } from './Dog.js';
 import { Chicken } from './Chicken.js';
 import { Cow } from './Cow.js';
+import { Pig } from './Pig.js';
 import gameApi from './GameApi.js';
-import { getMarketItemMeta, getInventoryQuantity, listMarketItems, MARKET_CATEGORIES } from './ItemCatalog.js';
+import {
+    ANIMAL_PRODUCT_CONFIGS,
+    BUILDING_CONFIGS,
+    FEED_CONFIGS,
+    FERTILIZER_CONFIGS,
+    getMarketItemMeta,
+    getInventoryQuantity,
+    listMarketItems,
+    MARKET_CATEGORIES
+} from './ItemCatalog.js';
+import { PhaserFarmWorld } from './src/PhaserFarmWorld.js';
+import { MAX_PLOTS } from './LandConfig.js';
+import { applyGameConfig, SYSTEM_SETTINGS } from './GameConfig.js';
 
 class Cloud {
     constructor(x, y, scale, speed, opacity, parallaxFactor, type = 'normal') {
@@ -127,11 +140,17 @@ class Game {
         this.homeState = null;
         this.visitedFarm = null;
         this.currentStall = [];
+        this.deliveryOrders = [];
+        this.weeklyStatus = null;
+        this.leaderboardData = null;
+        this.orderRefreshTimer = null;
+        this.buildingConfigs = BUILDING_CONFIGS;
 
         // Fog Canvas and Clouds state
         this.clouds = [];
         this.fogCanvas = null;
         this.fogCtx = null;
+        this.phaserWorld = null;
 
         // Start initialization
         this.init();
@@ -148,6 +167,12 @@ class Game {
 
             this.inventory = new Inventory(this);
             try {
+                try {
+                    applyGameConfig(await this.api.getGameConfig());
+                    this.systemSettings = SYSTEM_SETTINGS;
+                } catch (configError) {
+                    console.warn('Using built-in game configuration:', configError);
+                }
                 await this.inventory.loadGame();
                 this.hideAuthOverlay();
                 break;
@@ -159,14 +184,18 @@ class Game {
         }
 
         this.initDOM();
+        this.applySystemSettings();
         
         // Cache fog canvas context and initialize cloud pool
         this.fogCanvas = this.dom.fogCanvas;
         this.fogCtx = this.fogCanvas ? this.fogCanvas.getContext('2d') : null;
         this.initClouds();
 
+        this.phaserWorld = new PhaserFarmWorld(this);
+        await this.phaserWorld.ready;
+
         // Instantiate tiles
-        this.tiles = Array.from({ length: 28 }, (_, i) => new FarmTile(this, i));
+        this.tiles = Array.from({ length: MAX_PLOTS }, (_, i) => new FarmTile(this, i));
         
         // Instantiate farmer
         this.farmer = new Farmer(this);
@@ -187,7 +216,13 @@ class Game {
             new Cow(this, 2)
         ];
 
+        this.pigs = [
+            new Pig(this, 1),
+            new Pig(this, 2)
+        ];
+
         this.renderAll();
+        this.refreshDeliveryBoard({ silent: true });
         this.resizeGame();
 
         // Bind global resize
@@ -329,6 +364,10 @@ class Game {
             this.cows.forEach(c => c.update());
         }
 
+        if (this.pigs) {
+            this.pigs.forEach(p => p.update());
+        }
+
         // Update plot stages and growth progress
         if (!this.isVisitingFarm) {
             this.tiles.forEach(tile => tile.update(now));
@@ -367,10 +406,20 @@ class Game {
 
             // 2. Stats tick played time
             this.inventory.state.stats.timePlayed++;
+            this.refreshProductionUi();
             if (this.inventory.state.stats.timePlayed % 60 === 0) {
                 this.inventory.saveGame();
             }
         }, 1000);
+    }
+
+    refreshProductionUi() {
+        if (!this.inventory?.state) return;
+        this.phaserWorld?.syncAnimals();
+        const feedMillModal = document.getElementById('modal-feed-mill');
+        if (feedMillModal && !feedMillModal.classList.contains('hide')) {
+            this.renderFeedMillPanel();
+        }
     }
 
     // --- DOM Initialisation & Binding ---
@@ -396,6 +445,7 @@ class Game {
             seedPopup: document.getElementById('seed-popup'),
             btnCloseSeedPopup: document.getElementById('btn-close-seed-popup'),
             cropDetailPanel: document.getElementById('crop-detail-panel'),
+            btnCloseCropDetail: document.getElementById('btn-close-crop-detail'),
             detailCropIcon: document.getElementById('detail-crop-icon'),
             detailCropName: document.getElementById('detail-crop-name'),
             detailCropTimer: document.getElementById('detail-crop-timer'),
@@ -422,14 +472,30 @@ class Game {
             shopSellList: document.getElementById('shop-sell-list'),
             invSeedsGrid: document.getElementById('inv-seeds-grid'),
             invCropsGrid: document.getElementById('inv-crops-grid'),
+            invFeedsGrid: document.getElementById('inv-feeds-grid'),
+            invAnimalProductsGrid: document.getElementById('inv-animal-products-grid'),
             questList: document.getElementById('quest-list'),
             questBadge: document.getElementById('quest-badge'),
+            weeklyScore: document.getElementById('weekly-score'),
+            weeklyReset: document.getElementById('weekly-reset'),
+            weeklyMilestones: document.getElementById('weekly-milestones'),
             achievementList: document.getElementById('achievement-list'),
+            leaderboardList: document.getElementById('leaderboard-list'),
+            leaderboardMyRank: document.getElementById('leaderboard-my-rank'),
+            leaderboardReset: document.getElementById('leaderboard-reset'),
+            rankRewardPanel: document.getElementById('rank-reward-panel'),
             
             // Settings controls
             toggleSfx: document.getElementById('toggle-sfx'),
             toggleBgm: document.getElementById('toggle-bgm'),
             btnResetGame: document.getElementById('btn-reset-game'),
+            profileSettingsForm: document.getElementById('profile-settings-form'),
+            profileAccountId: document.getElementById('profile-account-id'),
+            profileEmail: document.getElementById('profile-email'),
+            profileFarmName: document.getElementById('profile-farm-name'),
+            profileSettingsMessage: document.getElementById('profile-settings-message'),
+            passwordSettingsForm: document.getElementById('password-settings-form'),
+            passwordSettingsMessage: document.getElementById('password-settings-message'),
             
             // Stats controls
             statsPlanted: document.getElementById('stats-planted'),
@@ -448,6 +514,10 @@ class Game {
 
         this.ensureMarketModal();
         this.ensureVisitBanner();
+        const questTitle = document.querySelector('#modal-quests .modal-header h2');
+        if (questTitle) questTitle.textContent = 'BẢNG ĐƠN HÀNG';
+        const questMenuText = document.querySelector('#btn-quests-menu .menu-btn-text');
+        if (questMenuText) questMenuText.textContent = 'Đơn Hàng';
 
         // Initialize Audio context trigger
         const initAudio = () => {
@@ -542,7 +612,7 @@ class Game {
         });
         this.dom.btnRank.addEventListener('click', () => {
             this.playSFX('click');
-            this.showToast('Bạn đang đứng Top 1 bảng xếp hạng nông trại vùng!');
+            this.openModal('leaderboard');
         });
         this.dom.btnSettings.addEventListener('click', () => {
             this.playSFX('click');
@@ -551,6 +621,7 @@ class Game {
         if (this.dom.btnMarket) {
             this.dom.btnMarket.addEventListener('click', () => {
                 this.playSFX('click');
+                this.activeShopTab = 'market';
                 this.openModal('shop');
             });
         }
@@ -561,7 +632,13 @@ class Game {
             });
         }
         if (this.dom.btnLogout) {
-            this.dom.btnLogout.addEventListener('click', () => {
+            this.dom.btnLogout.addEventListener('click', async () => {
+                const confirmed = await this.showCustomConfirm(
+                    '🚪 ĐĂNG XUẤT',
+                    'Bạn có chắc muốn đăng xuất khỏi tài khoản hiện tại?'
+                );
+                if (!confirmed) return;
+                await this.inventory.flushSave();
                 this.api.logout();
                 window.location.reload();
             });
@@ -594,6 +671,16 @@ class Game {
 
         this.dom.btnResetGame.addEventListener('click', () => {
             this.inventory.resetGame();
+        });
+
+        this.dom.profileSettingsForm?.addEventListener('submit', (event) => {
+            event.preventDefault();
+            this.submitProfileSettings();
+        });
+
+        this.dom.passwordSettingsForm?.addEventListener('submit', (event) => {
+            event.preventDefault();
+            this.submitPasswordSettings();
         });
 
         // Design Mode Listeners
@@ -647,10 +734,26 @@ class Game {
                     if (this.isVisitingFarm && modalName === 'shop') {
                         this.openVisitedStall();
                     } else {
+                        if (modalName === 'shop') this.activeShopTab = 'store';
                         this.openModal(modalName);
                     }
                 });
             }
+        };
+
+        const bindAnimalBuildingClick = (id, animalType) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('click', (e) => {
+                if (this.isDesignMode || this.hasDragged) return;
+                e.stopPropagation();
+                if (this.isVisitingFarm) {
+                    this.showToast('Bạn đang tham quan, không thể chăm vật nuôi ở farm này.');
+                    return;
+                }
+                this.playSFX('click');
+                this.handleAnimalBuildingClick(animalType);
+            });
         };
 
         bindBuildingClick('farmhouse-overlay', 'stats');
@@ -659,6 +762,20 @@ class Game {
         bindBuildingClick('pet-building', 'pets');
         bindBuildingClick('quest-building', 'quests');
         bindBuildingClick('achieve-building', 'achievements');
+        bindAnimalBuildingClick('chicken-coop', 'chicken');
+        bindAnimalBuildingClick('cow-pen', 'cow');
+        bindAnimalBuildingClick('pig-pen', 'pig');
+
+        document.getElementById('feed-mill-building')?.addEventListener('click', (e) => {
+            if (this.isDesignMode || this.hasDragged) return;
+            e.stopPropagation();
+            if (!this.canUseFeedMill()) {
+                this.showToast('Hãy mua và đặt Máy trộn trong chế độ Thiết kế.');
+                return;
+            }
+            this.playSFX('click');
+            this.openModal('feed-mill');
+        });
 
         const signpost = document.getElementById('signpost-building');
         if (signpost) {
@@ -691,23 +808,14 @@ class Game {
             });
         }
 
-        // Shop tab toggles
-        document.querySelectorAll('.shop-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                this.playSFX('click');
-                document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                
-                const type = tab.getAttribute('data-tab');
-                if (type === 'market') {
-                    this.dom.marketPanel.classList.remove('hide');
-                    this.dom.stallPanel.classList.add('hide');
-                } else {
-                    this.dom.marketPanel.classList.add('hide');
-                    this.dom.stallPanel.classList.remove('hide');
-                }
-            });
+        this.dom.btnCloseCropDetail?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.playSFX('click');
+            this.hideCropDetail();
+            this.phaserWorld?.clearSelectedTile();
         });
+
+        // Shop tab handlers are bound after the shop modal is rebuilt.
 
         // Setup Zooming & Panning
         const farmWorld = document.getElementById('farm-world');
@@ -739,6 +847,7 @@ class Game {
         viewport.addEventListener('mousedown', (e) => {
             const isModalOpen = Array.from(document.querySelectorAll('.modal')).some(m => !m.classList.contains('hide'));
             if (isModalOpen) return;
+            if (this.phaserWorld?.mainScene?.feedTray) return;
             if (e.button !== 0) return; 
 
             if (e.target.closest('button') || e.target.closest('.harvest-basket')) return;
@@ -804,6 +913,7 @@ class Game {
         const farmStage = document.getElementById('farm-stage');
         if (farmStage) {
             farmStage.addEventListener('click', (e) => {
+                if (this.phaserWorld?.consumeSuppressedStageClick()) return;
                 if (this.hasDragged || this.isDesignMode) return;
 
                 if (e.target.closest('button') || e.target.closest('.modal') || e.target.closest('.popover') || e.target.closest('.harvest-basket')) {
@@ -815,9 +925,8 @@ class Game {
                 }
 
                 const rect = farmStage.getBoundingClientRect();
-                const scale = this.baseScale * this.zoomLevel;
-                let localX = (e.clientX - rect.left) / scale;
-                let localY = (e.clientY - rect.top) / scale;
+                let localX = ((e.clientX - rect.left) / rect.width) * 1280;
+                let localY = ((e.clientY - rect.top) / rect.height) * 720;
 
                 localX = Math.max(0, Math.min(1280, localX));
                 localY = Math.max(0, Math.min(720, localY));
@@ -948,7 +1057,7 @@ class Game {
         }, 100);
     }
 
-    ensureMarketModal() {
+    ensureLegacyMarketModal() {
         const modal = document.getElementById('modal-shop');
         if (!modal) return;
 
@@ -1025,6 +1134,137 @@ class Game {
         }
 
         this.updateListingItemOptions();
+    }
+
+    ensureMarketModal() {
+        const modal = document.getElementById('modal-shop');
+        if (!modal) return;
+
+        const title = modal.querySelector('.modal-header h2');
+        const body = modal.querySelector('.modal-body');
+        if (!body) return;
+        if (title) title.textContent = '🏪 CỬA HÀNG NÔNG TRẠI';
+
+        if (body.dataset.shopReady !== 'true') {
+            body.dataset.shopReady = 'true';
+            body.innerHTML = `
+                <div class="shop-tabs">
+                    <button class="shop-tab active" data-tab="store">Cửa hàng</button>
+                    <button class="shop-tab" data-tab="market">Bảng chợ</button>
+                    <button class="shop-tab" data-tab="stall">Quầy của tôi</button>
+                </div>
+                <div id="shop-store-panel" class="shop-panel">
+                    <div class="shop-section">
+                        <h3>Hạt giống & phân bón</h3>
+                        <div id="shop-buy-list" class="shop-grid"></div>
+                    </div>
+                    <hr class="modal-divider">
+                    <div class="shop-section">
+                        <h3>Bán nông sản</h3>
+                        <div id="shop-sell-list" class="shop-grid"></div>
+                    </div>
+                </div>
+                <div id="market-panel" class="shop-panel hide">
+                    <div class="market-toolbar">
+                        <select id="market-category-filter" class="market-control">
+                            <option value="">Tất cả vật phẩm</option>
+                            <option value="seeds">Hạt giống</option>
+                            <option value="crops">Nông sản</option>
+                            <option value="fertilizers">Phân bón</option>
+                            <option value="feeds">Thức ăn</option>
+                            <option value="animalProducts">Sản phẩm vật nuôi</option>
+                        </select>
+                        <input id="market-search" class="market-control" type="search" placeholder="Tìm vật phẩm hoặc farm">
+                        <button id="btn-market-refresh" class="btn-buy" type="button">Làm mới</button>
+                    </div>
+                    <div id="market-list" class="shop-grid market-grid"></div>
+                </div>
+                <div id="stall-panel" class="shop-panel hide">
+                    <form id="market-listing-form" class="market-listing-form">
+                        <select id="listing-category" name="category" class="market-control" required>
+                            <option value="seeds">Hạt giống</option>
+                            <option value="crops">Nông sản</option>
+                            <option value="fertilizers">Phân bón</option>
+                            <option value="feeds">Thức ăn</option>
+                            <option value="animalProducts">Sản phẩm vật nuôi</option>
+                        </select>
+                        <select id="listing-item" name="itemId" class="market-control" required></select>
+                        <input id="listing-quantity" name="quantity" class="market-control" type="number" min="1" value="1" required>
+                        <input id="listing-price" name="priceEach" class="market-control" type="number" min="1" value="1" required>
+                        <button class="btn-sell" type="submit">Rao bán</button>
+                        <span id="listing-price-hint" class="market-hint"></span>
+                    </form>
+                    <div id="my-stall-list" class="shop-grid market-grid"></div>
+                </div>
+            `;
+        }
+
+        this.dom.storePanel = document.getElementById('shop-store-panel');
+        this.dom.feedMillPanel = document.getElementById('feed-mill-panel');
+        this.dom.feedMillStatus = document.getElementById('feed-mill-status');
+        this.dom.feedRecipeList = document.getElementById('feed-recipe-list');
+        this.dom.shopBuyList = document.getElementById('shop-buy-list');
+        this.dom.shopSellList = document.getElementById('shop-sell-list');
+        this.dom.marketPanel = document.getElementById('market-panel');
+        this.dom.stallPanel = document.getElementById('stall-panel');
+        this.dom.marketList = document.getElementById('market-list');
+        this.dom.myStallList = document.getElementById('my-stall-list');
+        this.dom.marketCategoryFilter = document.getElementById('market-category-filter');
+        this.dom.marketSearch = document.getElementById('market-search');
+        this.dom.btnMarketRefresh = document.getElementById('btn-market-refresh');
+        this.dom.marketListingForm = document.getElementById('market-listing-form');
+        this.dom.listingCategory = document.getElementById('listing-category');
+        this.dom.listingItem = document.getElementById('listing-item');
+        this.dom.listingQuantity = document.getElementById('listing-quantity');
+        this.dom.listingPrice = document.getElementById('listing-price');
+        this.dom.listingPriceHint = document.getElementById('listing-price-hint');
+
+        if (body.dataset.shopBound !== 'true') {
+            body.dataset.shopBound = 'true';
+            body.querySelectorAll('.shop-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    this.playSFX('click');
+                    const tabName = tab.getAttribute('data-tab') || 'store';
+                    this.selectShopTab(tabName);
+                    if (tabName === 'market' || tabName === 'stall') {
+                        this.refreshMarketPanels();
+                    }
+                });
+            });
+            this.dom.btnMarketRefresh?.addEventListener('click', () => this.refreshMarketPanels());
+            this.dom.marketSearch?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') this.refreshMarketPanels();
+            });
+            this.dom.marketCategoryFilter?.addEventListener('change', () => this.refreshMarketPanels());
+            this.dom.listingCategory?.addEventListener('change', () => this.updateListingItemOptions());
+            this.dom.listingItem?.addEventListener('change', () => this.updateListingPriceHint());
+            this.dom.marketListingForm?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.createMarketListing();
+            });
+        }
+
+        this.updateListingItemOptions();
+        this.selectShopTab(this.activeShopTab || 'store');
+    }
+
+    selectShopTab(tabName = 'store') {
+        const allowedTabs = new Set(['store', 'market', 'stall']);
+        const nextTab = allowedTabs.has(tabName) ? tabName : 'store';
+        this.activeShopTab = nextTab;
+
+        document.querySelectorAll('#modal-shop .shop-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.getAttribute('data-tab') === nextTab);
+        });
+
+        const panels = {
+            store: this.dom.storePanel,
+            market: this.dom.marketPanel,
+            stall: this.dom.stallPanel
+        };
+        Object.entries(panels).forEach(([key, panel]) => {
+            panel?.classList.toggle('hide', key !== nextTab);
+        });
     }
 
     ensureVisitBanner() {
@@ -1292,6 +1532,7 @@ class Game {
             if (btn) btn.classList.remove('active');
             this.showToast('🌍 Trọng lực bình thường đã trở lại.');
         }
+        this.phaserWorld?.setAntigravity(this.antigravityActive);
     }
 
     playBGM() {
@@ -1354,6 +1595,11 @@ class Game {
 
     // --- Particle Effects Engine ---
     createParticles(x, y, count, type) {
+        if (this.phaserWorld?.isReady()) {
+            this.phaserWorld.createParticles(x, y, count, type);
+            return;
+        }
+
         const parent = document.getElementById('particle-container');
         if (!parent) return;
 
@@ -1409,6 +1655,10 @@ class Game {
 
     // Calculate map pixel coordinates from a plot element's position
     getPlotPixelCoords(plotId) {
+        if (this.phaserWorld?.isReady()) {
+            return this.phaserWorld.getPlotWorldPosition(plotId);
+        }
+
         const plotEl = document.getElementById(`plot-${plotId}`);
         const parentEl = document.getElementById('game-world-objects');
         if (!plotEl || !parentEl) return { x: 0, y: 0 };
@@ -1426,20 +1676,82 @@ class Game {
         };
     }
 
+    getPlotScreenCoords(plotId) {
+        const coords = this.getPlotPixelCoords(plotId);
+        return this.stageToScreenCoords(coords.x, coords.y);
+    }
+
+    stageToScreenCoords(x, y) {
+        const farmStage = document.getElementById('farm-stage');
+        if (!farmStage) return { x, y };
+
+        const rect = farmStage.getBoundingClientRect();
+        return {
+            x: rect.left + (x / 1280) * rect.width,
+            y: rect.top + (y / 720) * rect.height
+        };
+    }
+
+    isPlotUnlocked(plotId) {
+        return this.inventory?.isPlotUnlocked(plotId) ?? true;
+    }
+
+    getNextLandPlotId() {
+        return this.inventory?.getNextLandPlotId() ?? null;
+    }
+
+    isNextLandPlot(plotId) {
+        return this.getNextLandPlotId() === Number(plotId);
+    }
+
+    getLandPurchasePrice() {
+        return this.inventory?.getLandPurchasePrice() ?? null;
+    }
+
+    getLandRequiredLevel() {
+        return this.inventory?.getLandRequiredLevel() ?? null;
+    }
+
+    getCropRequiredLevel(seedType) {
+        return Number(CROP_CONFIGS[seedType]?.requiredLevel) || 1;
+    }
+
+    isCropUnlocked(seedType) {
+        return (Number(this.inventory?.state?.level) || 1) >= this.getCropRequiredLevel(seedType);
+    }
+
     // --- Core Farm Actions ---
     handlePlotClick(plotId) {
-        if (this.isDesignMode || this.hasDragged) return;
+        if (this.isDesignMode || this.hasDragged || this.isPaveMode) return;
         if (this.isVisitingFarm) {
             this.showToast('Bạn đang tham quan nên không thể thao tác trên ruộng này.');
             return;
         }
         const plot = this.inventory.state.plots[plotId];
+        if (!plot) return;
         this.playSFX('click');
 
         // Toggle selected styling
         document.querySelectorAll('.plot').forEach(p => p.classList.remove('selected'));
         const plotEl = document.getElementById(`plot-${plotId}`);
+
+        if (!this.isPlotUnlocked(plotId)) {
+            this.hideSeedPopup();
+            this.hideCropDetail();
+
+            if (this.isNextLandPlot(plotId)) {
+                if (plotEl) plotEl.classList.add('selected');
+                this.phaserWorld?.selectTile(plotId);
+                this.showLandPurchaseDialog(plotId);
+            } else {
+                this.phaserWorld?.clearSelectedTile();
+                this.showToast('Hãy mở ô đất liền kề trước!');
+            }
+            return;
+        }
+
         if (plotEl) plotEl.classList.add('selected');
+        this.phaserWorld?.selectTile(plotId);
 
         if (plot.state === 'empty') {
             this.activePlotId = plotId;
@@ -1455,16 +1767,14 @@ class Game {
     }
 
     showSeedPopup(plotId) {
-        const plotEl = document.getElementById(`plot-${plotId}`);
         const popup = this.dom.seedPopup;
         
         this.renderSeedPopupCounts();
 
         const parentRect = this.dom.container.getBoundingClientRect();
-        const plotRect = plotEl.getBoundingClientRect();
-        
-        const popupLeft = (plotRect.left + plotRect.width / 2 - parentRect.left) - 125;
-        const popupTop = (plotRect.top - parentRect.top) - 230;
+        const plotScreen = this.getPlotScreenCoords(plotId);
+        const popupLeft = (plotScreen.x - parentRect.left) - 125;
+        const popupTop = (plotScreen.y - parentRect.top) - 230;
 
         popup.style.left = popupLeft + 'px';
         popup.style.top = popupTop + 'px';
@@ -1474,21 +1784,32 @@ class Game {
     hideSeedPopup() {
         this.dom.seedPopup.classList.add('hide');
         this.activePlotId = null;
+        this.phaserWorld?.clearSelectedTile();
     }
 
     renderSeedPopupCounts() {
-        for (const [key, value] of Object.entries(this.inventory.state.inventory.seeds)) {
+        for (const [key, crop] of Object.entries(CROP_CONFIGS)) {
+            if (crop.shopVisible === false) continue;
+            const value = Number(this.inventory.state.inventory.seeds[key]) || 0;
+            const requiredLevel = Number(crop.requiredLevel) || 1;
+            const isUnlocked = this.isCropUnlocked(key);
             const countEl = document.getElementById(`count-${key}`);
             if (countEl) {
-                countEl.textContent = `x${value}`;
+                countEl.textContent = isUnlocked ? `x${value}` : `Mở ở cấp ${requiredLevel}`;
             }
             const itemBtn = document.querySelector(`.seed-item[data-seed="${key}"]`);
             if (itemBtn) {
-                itemBtn.disabled = value <= 0;
+                itemBtn.disabled = !isUnlocked || value <= 0;
+                itemBtn.title = isUnlocked
+                    ? `${crop.nameVi} - ${crop.growthTime} giây`
+                    : `Đạt cấp ${requiredLevel} để mở khóa`;
             }
             const allBtn = document.querySelector(`.btn-plant-all[data-seed="${key}"]`);
             if (allBtn) {
-                allBtn.disabled = value <= 0;
+                allBtn.disabled = !isUnlocked || value <= 0;
+                allBtn.title = isUnlocked
+                    ? 'Trồng vào tất cả ô đất trống'
+                    : `Đạt cấp ${requiredLevel} để mở khóa`;
             }
         }
     }
@@ -1496,9 +1817,21 @@ class Game {
     plantSeedOnActivePlot(seedType) {
         if (this.isVisitingFarm) return;
         if (this.activePlotId === null) return;
+
+        const requiredLevel = this.getCropRequiredLevel(seedType);
+        if (!this.isCropUnlocked(seedType)) {
+            this.showToast(`Cần đạt cấp ${requiredLevel} để trồng ${CROP_CONFIGS[seedType]?.nameVi || 'giống này'}!`);
+            return;
+        }
         
         const plotId = this.activePlotId;
         const count = this.inventory.state.inventory.seeds[seedType] || 0;
+
+        if (!this.isPlotUnlocked(plotId)) {
+            this.hideSeedPopup();
+            this.showToast('Hãy mua ô đất này trước khi gieo hạt!');
+            return;
+        }
         
         if (count <= 0) {
             this.showToast('Bạn đã hết hạt giống này! Hãy mua thêm ở Cửa hàng.');
@@ -1578,7 +1911,12 @@ class Game {
 
     plantAllSeeds(seedType) {
         if (this.isVisitingFarm) return;
-        let emptyPlots = this.inventory.state.plots.filter(p => p.state === 'empty');
+        const requiredLevel = this.getCropRequiredLevel(seedType);
+        if (!this.isCropUnlocked(seedType)) {
+            this.showToast(`Cần đạt cấp ${requiredLevel} để trồng ${CROP_CONFIGS[seedType]?.nameVi || 'giống này'}!`);
+            return;
+        }
+        let emptyPlots = this.inventory.state.plots.filter(p => p.state === 'empty' && this.isPlotUnlocked(p.id));
         if (this.activePlotId !== null) {
             const activeIndex = emptyPlots.findIndex(p => p.id === this.activePlotId);
             if (activeIndex !== -1) {
@@ -1654,6 +1992,7 @@ class Game {
 
     harvestPlot(plotId) {
         if (this.isVisitingFarm) return;
+        if (!this.isPlotUnlocked(plotId)) return;
         const plot = this.inventory.state.plots[plotId];
         if (plot.state !== 'mature') return;
 
@@ -1716,11 +2055,15 @@ class Game {
     }
 
     harvestAllCrops() {
+        if (this.systemSettings?.ENABLE_AUTO_HARVEST === false) {
+            this.showToast('Chức năng thu hoạch tất cả đang tạm tắt.');
+            return;
+        }
         if (this.isVisitingFarm) {
             this.showToast('Bạn đang tham quan nên không thể thu hoạch farm này.');
             return;
         }
-        const maturePlots = this.inventory.state.plots.filter(p => p.state === 'mature');
+        const maturePlots = this.inventory.state.plots.filter(p => p.state === 'mature' && this.isPlotUnlocked(p.id));
         const matureCount = maturePlots.length;
 
         if (matureCount === 0) {
@@ -1814,6 +2157,7 @@ class Game {
         this.updateHarvestAllBadge();
         this.generateForestFenceAndClouds();
         this.renderPavedPaths();
+        this.phaserWorld?.syncAll();
     }
 
     renderHUD() {
@@ -2082,6 +2426,60 @@ class Game {
         });
     }
 
+    showLandPurchaseDialog(plotId) {
+        const modal = document.getElementById('modal-land-purchase');
+        const titleEl = document.getElementById('land-purchase-title');
+        const messageEl = document.getElementById('land-purchase-message');
+        const goldBtn = document.getElementById('btn-land-buy-gold');
+        const gemsBtn = document.getElementById('btn-land-buy-gems');
+        const cancelBtn = document.getElementById('btn-land-buy-cancel');
+        const closeBtn = document.getElementById('btn-land-buy-close');
+        const price = this.getLandPurchasePrice();
+        const requiredLevel = this.getLandRequiredLevel();
+
+        if (!modal || !price) {
+            this.showToast('Bạn đã mở hết ruộng đất!');
+            return;
+        }
+
+        const cleanup = () => {
+            modal.classList.add('hide');
+            ['btn-land-buy-gold', 'btn-land-buy-gems', 'btn-land-buy-cancel', 'btn-land-buy-close'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.replaceWith(el.cloneNode(true));
+            });
+        };
+
+        if (titleEl) titleEl.textContent = `Mua ô đất #${plotId + 1}`;
+        const currentLevel = Number(this.inventory.state.level) || 1;
+        const meetsLevel = currentLevel >= requiredLevel;
+        if (messageEl) {
+            messageEl.textContent = meetsLevel
+                ? `Yêu cầu cấp ${requiredLevel} — Bạn đã đủ cấp để mua.`
+                : `Yêu cầu cấp ${requiredLevel} — Cấp hiện tại: ${currentLevel}.`;
+            messageEl.classList.toggle('requirement-missing', !meetsLevel);
+        }
+        if (goldBtn) {
+            goldBtn.textContent = `Mua bằng ${price.gold.toLocaleString('en-US')} Vàng`;
+            goldBtn.disabled = !meetsLevel || this.inventory.state.coins < price.gold;
+            goldBtn.addEventListener('click', () => {
+                if (this.inventory.buyLand('gold')) cleanup();
+            });
+        }
+        if (gemsBtn) {
+            gemsBtn.textContent = `Mua bằng ${price.gems.toLocaleString('en-US')} KC`;
+            gemsBtn.disabled = !meetsLevel || this.inventory.state.gems < price.gems;
+            gemsBtn.addEventListener('click', () => {
+                if (this.inventory.buyLand('gems')) cleanup();
+            });
+        }
+
+        const cancelHandler = () => cleanup();
+        cancelBtn?.addEventListener('click', cancelHandler);
+        closeBtn?.addEventListener('click', cancelHandler);
+        modal.classList.remove('hide');
+    }
+
     updateSignpostText() {
         const signpostText = this.dom.signpostText || document.getElementById('signpost-text');
         if (signpostText) {
@@ -2101,7 +2499,7 @@ class Game {
         }
         if (plotId === null || plotId === undefined) return;
         const plot = this.inventory.state.plots[plotId];
-        if (!plot || plot.state === 'mature' || plot.state === 'empty') return;
+        if (!plot || !this.isPlotUnlocked(plotId) || plot.state === 'mature' || plot.state === 'empty') return;
 
         if (!this.inventory.state.inventory.fertilizers) {
             this.inventory.state.inventory.fertilizers = { mid: 0, high: 0 };
@@ -2142,7 +2540,7 @@ class Game {
         }
         if (plotId === null || plotId === undefined) return;
         const plot = this.inventory.state.plots[plotId];
-        if (!plot || plot.state === 'mature' || plot.state === 'empty') return;
+        if (!plot || !this.isPlotUnlocked(plotId) || plot.state === 'mature' || plot.state === 'empty') return;
 
         if (!this.inventory.state.inventory.fertilizers) {
             this.inventory.state.inventory.fertilizers = { mid: 0, high: 0 };
@@ -2205,6 +2603,13 @@ class Game {
             this.renderStats();
         } else if (modalId === 'pets') {
             this.renderPets();
+        } else if (modalId === 'leaderboard') {
+            this.renderLeaderboard();
+        } else if (modalId === 'settings') {
+            this.renderAccountSettings();
+        } else if (modalId === 'feed-mill') {
+            if (!this.canUseFeedMill()) return;
+            this.renderFeedMillPanel();
         }
 
         modal.classList.remove('hide');
@@ -2215,9 +2620,135 @@ class Game {
         if (modal) modal.classList.add('hide');
     }
 
-    renderShop() {
+    setAccountSettingsMessage(element, message = '', isError = false) {
+        if (!element) return;
+        element.textContent = message;
+        element.classList.toggle('hide', !message);
+        element.classList.toggle('error', Boolean(message) && isError);
+    }
+
+    renderAccountSettings() {
+        if (this.dom.profileAccountId) {
+            this.dom.profileAccountId.value = this.currentUser?.id ? `#${this.currentUser.id}` : '--';
+        }
+        if (this.dom.profileEmail) {
+            this.dom.profileEmail.value = this.currentUser?.email || '';
+        }
+        if (this.dom.profileFarmName) {
+            this.dom.profileFarmName.value = this.inventory?.state?.farmName
+                || this.currentUser?.farmName
+                || 'Happy Farm';
+        }
+        this.setAccountSettingsMessage(this.dom.profileSettingsMessage);
+        this.setAccountSettingsMessage(this.dom.passwordSettingsMessage);
+    }
+
+    async submitProfileSettings() {
+        const form = this.dom.profileSettingsForm;
+        if (!form || this.isVisitingFarm) return;
+        const submit = form.querySelector('button[type="submit"]');
+        const email = this.dom.profileEmail?.value.trim() || '';
+        const farmName = this.dom.profileFarmName?.value.trim() || '';
+
+        submit.disabled = true;
+        this.setAccountSettingsMessage(this.dom.profileSettingsMessage);
+        try {
+            const payload = await this.api.updateProfile({ email, farmName });
+            this.currentUser = payload.profile || this.currentUser;
+            if (payload.state) {
+                this.inventory.state = this.inventory.mergeDeep({}, this.inventory.state, payload.state);
+            } else {
+                this.inventory.state.farmName = farmName;
+            }
+            this.updateSignpostText();
+            this.renderAccountSettings();
+            this.setAccountSettingsMessage(
+                this.dom.profileSettingsMessage,
+                'Đã cập nhật thông tin cá nhân.'
+            );
+            this.showToast('Đã cập nhật thông tin cá nhân!');
+        } catch (err) {
+            this.setAccountSettingsMessage(
+                this.dom.profileSettingsMessage,
+                err.message || 'Không cập nhật được thông tin cá nhân.',
+                true
+            );
+        } finally {
+            submit.disabled = false;
+        }
+    }
+
+    async submitPasswordSettings() {
+        const form = this.dom.passwordSettingsForm;
+        if (!form) return;
+        const submit = form.querySelector('button[type="submit"]');
+        const data = new FormData(form);
+        const currentPassword = String(data.get('currentPassword') || '');
+        const newPassword = String(data.get('newPassword') || '');
+        const confirmPassword = String(data.get('confirmPassword') || '');
+
+        this.setAccountSettingsMessage(this.dom.passwordSettingsMessage);
+        if (newPassword !== confirmPassword) {
+            this.setAccountSettingsMessage(
+                this.dom.passwordSettingsMessage,
+                'Mật khẩu nhập lại không khớp.',
+                true
+            );
+            return;
+        }
+
+        submit.disabled = true;
+        try {
+            const payload = await this.api.changePassword({ currentPassword, newPassword });
+            form.reset();
+            this.setAccountSettingsMessage(
+                this.dom.passwordSettingsMessage,
+                payload.message || 'Đổi mật khẩu thành công.'
+            );
+            this.showToast('Đổi mật khẩu thành công!');
+        } catch (err) {
+            this.setAccountSettingsMessage(
+                this.dom.passwordSettingsMessage,
+                err.message || 'Không đổi được mật khẩu.',
+                true
+            );
+        } finally {
+            submit.disabled = false;
+        }
+    }
+
+    applySystemSettings() {
+        const settings = this.systemSettings || SYSTEM_SETTINGS;
+        const toggle = (element, visible) => {
+            if (!element) return;
+            element.hidden = !visible;
+            element.classList.toggle('hide', !visible);
+        };
+        toggle(this.dom?.btnHarvestAll, settings.ENABLE_AUTO_HARVEST !== false);
+        toggle(document.getElementById('btn-quests-menu'), settings.ENABLE_DELIVERY !== false);
+        toggle(document.getElementById('quest-building'), settings.ENABLE_DELIVERY !== false);
+        ['chicken-coop', 'cow-pen', 'pig-pen'].forEach(id => toggle(document.getElementById(id), settings.ENABLE_ANIMAL !== false));
+        document.querySelectorAll('input[type="password"]').forEach(input => {
+            input.minLength = Math.max(6, Number(settings.PASSWORD_MIN_LENGTH || 6));
+        });
+        clearInterval(this.shopRefreshInterval);
+        const refreshSeconds = Number(settings.SHOP_REFRESH_TIME || 0);
+        if (refreshSeconds > 0) {
+            this.shopRefreshInterval = setInterval(() => {
+                if (!document.getElementById('modal-shop')?.classList.contains('hide')) this.renderShop();
+            }, refreshSeconds * 1000);
+        }
+        if (settings.ENABLE_EVENT !== false && settings.EVENT_POPUP) {
+            const event = settings.ACTIVE_EVENTS?.[0];
+            const message = event?.name || settings.EVENT_BANNER;
+            if (message) setTimeout(() => this.showToast(`🎉 ${message}`), 500);
+        }
+    }
+
+    renderStorePanel() {
         const buyGrid = this.dom.shopBuyList;
         const sellGrid = this.dom.shopSellList;
+        if (!buyGrid || !sellGrid) return;
         
         buyGrid.innerHTML = '';
         sellGrid.innerHTML = '';
@@ -2230,15 +2761,18 @@ class Game {
         };
 
         for (const [key, crop] of Object.entries(CROP_CONFIGS)) {
+            const requiredLevel = Number(crop.requiredLevel) || 1;
+            const isUnlocked = this.isCropUnlocked(key);
             // 1. Buy Seed Card
             const buyCard = document.createElement('div');
-            buyCard.className = 'shop-card';
+            buyCard.className = `shop-card ${isUnlocked ? '' : 'crop-locked'}`;
             buyCard.innerHTML = `
                 <span class="card-icon">${crop.icon}</span>
                 <div class="card-details">
                     <span class="card-title">Hạt giống ${crop.nameVi}</span>
-                    <span class="card-desc">Lớn sau: ${formatDuration(crop.growthTime)}. Thu hoạch nhận +${crop.xpReward} XP.</span>
-                    <span class="card-price" id="buy-price-${key}">🪙 ${crop.seedCost} Vàng</span>
+                    <span class="card-desc">${isUnlocked ? `Lớn sau: ${formatDuration(crop.growthTime)}. Thu hoạch nhận +${crop.xpReward} XP.` : `🔒 Mở khóa ở cấp ${requiredLevel}.`}</span>
+                    <span class="card-price" id="buy-price-${key}">${crop.originalPrice>crop.seedCost?`<del>🪙 ${crop.originalPrice}</del> `:''}🪙 ${crop.seedCost} Vàng ${crop.flashActive?'<b class="shop-flash-badge">FLASH SALE</b>':crop.discountActive?'<b class="shop-discount-badge">GIẢM GIÁ</b>':''}</span>
+                    ${crop.flashActive&&crop.flashSaleEnd?`<small class="shop-countdown" data-shop-countdown="${this.escapeHtml(crop.flashSaleEnd)}"></small>`:''}
                     <div class="buy-action-row">
                         <div class="qty-selector">
                             <button type="button" class="qty-btn qty-dec" id="qty-dec-${key}">-</button>
@@ -2260,7 +2794,10 @@ class Game {
             const maxAffordable = Math.floor(this.inventory.state.coins / crop.seedCost);
             const maxQty = Math.max(1, maxAffordable);
             
-            buyBtn.disabled = this.inventory.state.coins < crop.seedCost;
+            buyBtn.disabled = !isUnlocked || this.inventory.state.coins < crop.seedCost;
+            qtyInput.disabled = !isUnlocked;
+            decBtn.disabled = !isUnlocked;
+            incBtn.disabled = !isUnlocked;
             
             const handleInput = () => {
                 let val = qtyInput.value;
@@ -2279,7 +2816,7 @@ class Game {
                 qtyInput.value = qty;
                 const totalCost = crop.seedCost * qty;
                 priceLabel.innerHTML = `🪙 ${totalCost} Vàng`;
-                buyBtn.disabled = this.inventory.state.coins < totalCost;
+                buyBtn.disabled = !isUnlocked || this.inventory.state.coins < totalCost;
             };
 
             qtyInput.addEventListener('input', handleInput);
@@ -2337,10 +2874,11 @@ class Game {
         }
 
         // 3. Add Fertilizers to Shop Buy list
-        const fertilizersConfig = [
-            { key: 'mid', name: 'Phân bón Trung cấp', icon: '🧪', desc: 'Rút ngắn 50% thời gian chín còn lại của cây.', cost: 50 },
-            { key: 'high', name: 'Phân bón Cao cấp', icon: '💎', desc: 'Rút ngắn 100% thời gian chờ, giúp cây chín ngay.', cost: 150 }
-        ];
+        const fertilizersConfig = Object.entries(FERTILIZER_CONFIGS).map(([key, item]) => ({
+            key, name: item.nameVi, icon: item.icon,
+            desc: key === 'high' ? 'Rút ngắn 100% thời gian chờ, giúp cây chín ngay.' : 'Rút ngắn 50% thời gian chín còn lại của cây.',
+            cost: Number(item.basePrice), ...item
+        })).filter(item => item.shopVisible !== false);
 
         fertilizersConfig.forEach(fert => {
             const buyCard = document.createElement('div');
@@ -2350,7 +2888,8 @@ class Game {
                 <div class="card-details">
                     <span class="card-title">${fert.name}</span>
                     <span class="card-desc">${fert.desc}</span>
-                    <span class="card-price" id="buy-price-${fert.key}">🪙 ${fert.cost} Vàng</span>
+                    <span class="card-price" id="buy-price-${fert.key}">${fert.originalPrice>fert.cost?`<del>🪙 ${fert.originalPrice}</del> `:''}🪙 ${fert.cost} Vàng ${fert.flashActive?'<b class="shop-flash-badge">FLASH SALE</b>':fert.discountActive?'<b class="shop-discount-badge">GIẢM GIÁ</b>':''}</span>
+                    ${fert.flashActive&&fert.flashSaleEnd?`<small class="shop-countdown" data-shop-countdown="${this.escapeHtml(fert.flashSaleEnd)}"></small>`:''}
                     <div class="buy-action-row">
                         <div class="qty-selector">
                             <button type="button" class="qty-btn qty-dec">-</button>
@@ -2425,6 +2964,100 @@ class Game {
                 const qty = parseInt(qtyInput.value) || 1;
                 this.inventory.buyFertilizer(fert.key, qty);
             });
+        });
+
+        const feedMill = BUILDING_CONFIGS.feed_mill;
+        if (feedMill && feedMill.shopVisible !== false) {
+            const owned = this.inventory.getInventoryAmount('buildings', 'feed_mill') > 0;
+            const card = document.createElement('div');
+            card.className = 'shop-card feed-mill-shop-card';
+            card.innerHTML = `
+                <span class="card-icon">${feedMill.icon}</span>
+                <div class="card-details">
+                    <span class="card-title">${feedMill.nameVi}</span>
+                    <span class="card-desc">Mua một lần, sau đó vào Thiết kế và kéo máy ra nông trại.</span>
+                    <span class="card-price">🪙 ${Number(feedMill.basePrice || 2000).toLocaleString('vi-VN')} Vàng</span>
+                    <button class="btn-buy" ${owned || this.inventory.state.coins < Number(feedMill.basePrice || 2000) ? 'disabled' : ''}>
+                        ${owned ? 'Đã sở hữu' : 'Mua máy'}
+                    </button>
+                </div>
+            `;
+            card.querySelector('.btn-buy')?.addEventListener('click', () => this.inventory.buyFeedMill());
+            buyGrid.appendChild(card);
+        }
+        this.updateShopCountdowns();
+    }
+
+    updateShopCountdowns() {
+        document.querySelectorAll('[data-shop-countdown]').forEach(element => {
+            const remaining = new Date(element.dataset.shopCountdown).getTime() - Date.now();
+            if (remaining <= 0) { element.textContent = 'Flash Sale đã kết thúc'; return; }
+            const totalSeconds = Math.floor(remaining / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            element.textContent = `Còn ${hours}h ${minutes}m ${seconds}s`;
+        });
+        clearTimeout(this.shopCountdownTimer);
+        if (document.querySelector('[data-shop-countdown]')) this.shopCountdownTimer = setTimeout(() => this.updateShopCountdowns(), 1000);
+    }
+
+    renderFeedMillPanel() {
+        if (!this.dom.feedMillStatus || !this.dom.feedRecipeList || !this.inventory?.state) return;
+
+        const jobInfo = this.inventory.getFeedMillJobInfo();
+        if (jobInfo.hasJob) {
+            const outputName = jobInfo.outputMeta?.name || jobInfo.recipe.outputItemId;
+            const statusText = jobInfo.ready
+                ? `${outputName} đã sẵn sàng`
+                : `Đang trộn ${outputName}, còn ${this.formatDurationMs(jobInfo.remainingMs)}`;
+            this.dom.feedMillStatus.innerHTML = `
+                <div class="feed-mill-job ${jobInfo.ready ? 'ready' : ''}">
+                    <div>
+                        <strong>${jobInfo.outputMeta?.icon || '🌾'} ${statusText}</strong>
+                        <span>Thu được x${jobInfo.recipe.outputQty} khi hoàn tất.</span>
+                    </div>
+                    <button class="btn-buy" id="btn-feed-job-collect" ${jobInfo.ready ? '' : 'disabled'}>Thu</button>
+                </div>
+            `;
+            this.dom.feedMillStatus.querySelector('#btn-feed-job-collect')?.addEventListener('click', () => {
+                this.inventory.collectFeedMillJob();
+            });
+        } else {
+            this.dom.feedMillStatus.innerHTML = `
+                <div class="feed-mill-job">
+                    <div>
+                        <strong>Máy trộn đang trống</strong>
+                        <span>Chọn một công thức bên dưới để làm thức ăn cho vật nuôi.</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        this.dom.feedRecipeList.innerHTML = '';
+        Object.values(FEED_RECIPES).forEach(recipe => {
+            const outputMeta = getMarketItemMeta(recipe.outputCategory, recipe.outputItemId);
+            const status = this.inventory.getFeedRecipeStatus(recipe.id);
+            const ingredientsHtml = status.ingredients.map(item => `
+                <span class="${item.ok ? 'ok' : 'missing'}">
+                    ${item.meta.icon} ${item.meta.name} ${item.owned}/${item.quantity}
+                </span>
+            `).join('');
+            const card = document.createElement('div');
+            card.className = 'shop-card feed-recipe-card';
+            card.innerHTML = `
+                <span class="card-icon">${outputMeta.icon}</span>
+                <div class="card-details">
+                    <span class="card-title">${outputMeta.name}</span>
+                    <span class="card-desc">Tạo x${recipe.outputQty} sau ${this.formatDurationMs(recipe.durationSec * 1000)}</span>
+                    <div class="recipe-ingredients">${ingredientsHtml}</div>
+                    <button class="btn-buy" ${status.ok ? '' : 'disabled'}>Trộn</button>
+                </div>
+            `;
+            card.querySelector('.btn-buy')?.addEventListener('click', () => {
+                this.inventory.startFeedRecipe(recipe.id);
+            });
+            this.dom.feedRecipeList.appendChild(card);
         });
     }
 
@@ -2505,7 +3138,7 @@ class Game {
         });
     }
 
-    async renderShop() {
+    async refreshMarketPanels() {
         this.ensureMarketModal();
         if (!this.dom.marketList || !this.dom.myStallList) return;
 
@@ -2538,6 +3171,13 @@ class Game {
         }
     }
 
+    async renderShop() {
+        this.ensureMarketModal();
+        this.renderStorePanel();
+        this.renderFeedMillPanel();
+        await this.refreshMarketPanels();
+    }
+
     applyServerState(state) {
         if (!state) return;
         this.inventory.state = this.inventory.mergeDeep({}, this.inventory.state || {}, state);
@@ -2547,6 +3187,8 @@ class Game {
         this.tiles.forEach(tile => tile.render());
         this.renderPavedPaths();
         this.updateListingItemOptions();
+        this.applyLayout();
+        this.phaserWorld?.syncAll();
     }
 
     async createMarketListing() {
@@ -2668,11 +3310,46 @@ class Game {
 
     openVisitedStall() {
         this.openModal('shop');
-        document.querySelectorAll('.shop-tab').forEach(tab => tab.classList.remove('active'));
-        const marketTab = document.querySelector('.shop-tab[data-tab="market"]');
-        marketTab?.classList.add('active');
-        this.dom.marketPanel?.classList.remove('hide');
-        this.dom.stallPanel?.classList.add('hide');
+        this.selectShopTab('market');
+        this.refreshMarketPanels();
+    }
+
+    handleAnimalClick(animalId) {
+        if (this.systemSettings?.ENABLE_ANIMAL === false) {
+            this.showToast('Chức năng vật nuôi đang tạm tắt.');
+            return;
+        }
+        if (this.isDesignMode) return;
+        if (this.isVisitingFarm) {
+            this.showToast('Bạn đang tham quan, không thể chăm vật nuôi ở farm này.');
+            return;
+        }
+        const info = this.inventory.getAnimalStatusInfo(animalId);
+        if (!info) return;
+        if (info.status === 'ready') {
+            this.inventory.collectAnimalProduct(animalId);
+        } else if (info.status === 'hungry') {
+            this.phaserWorld?.showFeedTray(animalId);
+        } else {
+            this.showToast(`${info.config.label} đang sản xuất, còn ${this.formatDurationMs(info.remainingMs)}.`);
+        }
+        this.phaserWorld?.syncAnimals();
+    }
+
+    handleAnimalBuildingClick(animalType) {
+        const labels = { chicken: 'gà', cow: 'bò', pig: 'heo' };
+        this.showToast(`Hãy chọn trực tiếp một con ${labels[animalType] || 'vật nuôi'} để chăm sóc.`);
+    }
+
+    feedSelectedAnimal(animalId) {
+        const fed = this.inventory.feedAnimal(animalId);
+        if (fed) this.phaserWorld?.closeFeedTray();
+        return fed;
+    }
+
+    canUseFeedMill() {
+        return this.inventory?.getInventoryAmount('buildings', 'feed_mill') > 0
+            && Boolean(this.inventory?.state?.layout?.feedMill);
     }
 
     renderInventory() {
@@ -2814,6 +3491,357 @@ class Game {
         }
     }
 
+    renderQuests() {
+        this.refreshDeliveryBoard();
+    }
+
+    updateQuestBadge() {
+        const claimableQuests = this.getClaimableOrderCount()
+            + this.getClaimableMilestoneCount()
+            + (this.leaderboardData?.previousReward?.claimable ? 1 : 0);
+        const badge = this.dom.questBadge;
+        if (!badge) return;
+        if (claimableQuests > 0) {
+            badge.textContent = claimableQuests;
+            badge.classList.remove('hide');
+        } else {
+            badge.classList.add('hide');
+        }
+    }
+
+    escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch]));
+    }
+
+    formatDurationMs(durationMs) {
+        const totalSeconds = Math.max(0, Math.ceil(Number(durationMs || 0) / 1000));
+        if (totalSeconds <= 0) return 'sẵn sàng';
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        if (minutes <= 0) return `${seconds}s`;
+        return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    }
+
+    formatShortCountdown(targetIso) {
+        if (!targetIso) return '--';
+        const remainingMs = Math.max(0, new Date(targetIso).getTime() - Date.now());
+        const totalSeconds = Math.ceil(remainingMs / 1000);
+        if (totalSeconds <= 0) return 'now';
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        if (days > 0) return `${days}d ${hours}h`;
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        if (minutes > 0) return `${minutes}m ${seconds}s`;
+        return `${seconds}s`;
+    }
+
+    formatReward(reward = {}) {
+        const parts = [];
+        if (reward.coins) parts.push(`${Number(reward.coins).toLocaleString('en-US')} vàng`);
+        if (reward.gems) parts.push(`${Number(reward.gems).toLocaleString('en-US')} kim cương`);
+        if (reward.xp) parts.push(`${Number(reward.xp).toLocaleString('en-US')} XP`);
+        if (reward.fertilizers) {
+            Object.entries(reward.fertilizers).forEach(([type, amount]) => {
+                const name = type === 'mid' ? 'phân trung cấp' : type === 'high' ? 'phân cao cấp' : `phân ${type}`;
+                parts.push(`${amount} ${name}`);
+            });
+        }
+        return parts.join(' | ') || 'Không có thưởng';
+    }
+
+    getOrderAvailability(order) {
+        const rows = (order.items || []).map(item => {
+            const owned = Number(this.inventory.state.inventory?.[item.category]?.[item.itemId] || 0);
+            const needed = Number(item.quantity || 0);
+            const meta = getMarketItemMeta(item.category, item.itemId);
+            return {
+                ...item,
+                owned,
+                needed,
+                ok: owned >= needed,
+                icon: meta.icon,
+                name: meta.name
+            };
+        });
+        return {
+            rows,
+            canDeliver: order.status === 'active' && rows.length > 0 && rows.every(row => row.ok)
+        };
+    }
+
+    getClaimableOrderCount() {
+        return (this.deliveryOrders || []).filter(order => this.getOrderAvailability(order).canDeliver).length;
+    }
+
+    getClaimableMilestoneCount() {
+        return (this.weeklyStatus?.milestones || []).filter(milestone => milestone.claimable).length;
+    }
+
+    async refreshDeliveryBoard(options = {}) {
+        const { silent = false } = options;
+        if (!this.dom?.questList) return;
+        clearTimeout(this.orderRefreshTimer);
+
+        if (this.isVisitingFarm) {
+            this.dom.questList.innerHTML = '<div class="market-empty">Về nhà để giao đơn hàng.</div>';
+            return;
+        }
+
+        if (!silent) {
+            this.dom.questList.innerHTML = '<div class="market-empty">Đang tải bảng đơn hàng...</div>';
+        }
+
+        try {
+            const payload = await this.api.getOrders();
+            this.deliveryOrders = payload.orders || [];
+            this.weeklyStatus = payload.weekly || null;
+            this.renderDeliveryBoardContent();
+            this.updateQuestBadge();
+        } catch (err) {
+            if (!silent) {
+                this.dom.questList.innerHTML = `<div class="market-empty">${this.escapeHtml(err.message || 'Không tải được bảng đơn hàng.')}</div>`;
+            }
+        }
+    }
+
+    renderDeliveryBoardContent() {
+        if (!this.dom?.questList) return;
+        clearTimeout(this.orderRefreshTimer);
+
+        const weekly = this.weeklyStatus;
+        if (this.dom.weeklyScore) {
+            const points = Number(weekly?.score?.points || 0);
+            this.dom.weeklyScore.textContent = `${points.toLocaleString('en-US')} điểm`;
+        }
+        if (this.dom.weeklyReset) {
+            this.dom.weeklyReset.textContent = this.formatShortCountdown(weekly?.endsAt);
+        }
+
+        this.renderWeeklyMilestones();
+
+        if (!this.deliveryOrders?.length) {
+            this.dom.questList.innerHTML = '<div class="market-empty">Chưa có đơn hàng nào.</div>';
+            return;
+        }
+
+        let hasCooldown = false;
+        this.dom.questList.innerHTML = '';
+        this.deliveryOrders
+            .slice()
+            .sort((a, b) => Number(a.slotIndex) - Number(b.slotIndex))
+            .forEach(order => {
+                const card = this.createOrderCard(order);
+                if (order.status === 'trashed') hasCooldown = true;
+                this.dom.questList.appendChild(card);
+            });
+
+        if (hasCooldown) {
+            this.orderRefreshTimer = setTimeout(() => {
+                const expired = this.deliveryOrders.some(order => (
+                    order.status === 'trashed'
+                    && new Date(order.cooldownUntil).getTime() <= Date.now()
+                ));
+                if (expired) {
+                    this.refreshDeliveryBoard({ silent: true });
+                } else {
+                    this.renderDeliveryBoardContent();
+                }
+            }, 1000);
+        }
+    }
+
+    renderWeeklyMilestones() {
+        const container = this.dom.weeklyMilestones;
+        if (!container) return;
+        const milestones = this.weeklyStatus?.milestones || [];
+        if (!milestones.length) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = milestones.map(milestone => {
+            const className = milestone.claimed ? 'milestone-card claimed' : milestone.claimable ? 'milestone-card claimable' : 'milestone-card';
+            const button = milestone.claimed
+                ? '<button class="btn-claim" disabled>Đã nhận</button>'
+                : `<button class="btn-claim" data-claim-milestone="${this.escapeHtml(milestone.id)}" ${milestone.claimable ? '' : 'disabled'}>Nhận</button>`;
+            return `
+                <div class="${className}">
+                    <div class="milestone-title">${Number(milestone.threshold).toLocaleString('en-US')} điểm</div>
+                    <div class="milestone-reward">${this.escapeHtml(this.formatReward(milestone.reward))}</div>
+                    ${button}
+                </div>
+            `;
+        }).join('');
+
+        container.querySelectorAll('[data-claim-milestone]').forEach(btn => {
+            btn.addEventListener('click', () => this.claimWeeklyMilestone(btn.getAttribute('data-claim-milestone')));
+        });
+    }
+
+    createOrderCard(order) {
+        const card = document.createElement('div');
+        const availability = this.getOrderAvailability(order);
+        const remaining = order.status === 'trashed' ? this.formatShortCountdown(order.cooldownUntil) : null;
+        card.className = `order-card ${availability.canDeliver ? 'ready' : ''} ${order.status === 'trashed' ? 'cooldown' : ''}`;
+
+        if (order.status === 'trashed') {
+            card.innerHTML = `
+                <div class="order-title">Ô đơn ${Number(order.slotIndex) + 1}</div>
+                <p class="card-desc">Đang chờ đơn mới: ${this.escapeHtml(remaining)}</p>
+            `;
+            return card;
+        }
+
+        const itemsHtml = availability.rows.map(row => `
+            <div class="order-item">
+                <span>${this.escapeHtml(row.icon)} ${this.escapeHtml(row.name)} x${row.needed}</span>
+                <strong class="order-owned ${row.ok ? 'ok' : 'missing'}">${row.owned}/${row.needed}</strong>
+            </div>
+        `).join('');
+
+        card.innerHTML = `
+            <div class="order-title">Đơn hàng ${Number(order.slotIndex) + 1}</div>
+            <div class="order-items">${itemsHtml}</div>
+            <div class="order-reward">
+                ${Number(order.rewardCoins).toLocaleString('en-US')} vàng | ${Number(order.rewardXp).toLocaleString('en-US')} XP | ${Number(order.weeklyPoints).toLocaleString('en-US')} điểm
+            </div>
+            <div class="order-actions">
+                <button class="btn-claim" data-deliver-order="${order.id}" ${availability.canDeliver ? '' : 'disabled'}>Giao</button>
+                <button class="btn-secondary-action" data-trash-order="${order.id}">Hủy</button>
+            </div>
+        `;
+
+        card.querySelector('[data-deliver-order]')?.addEventListener('click', () => this.deliverOrder(order.id));
+        card.querySelector('[data-trash-order]')?.addEventListener('click', () => this.trashOrder(order.id));
+        return card;
+    }
+
+    async deliverOrder(orderId) {
+        try {
+            const payload = await this.api.deliverOrder(orderId);
+            this.applyServerState(payload.state);
+            this.deliveryOrders = payload.orders || [];
+            this.weeklyStatus = payload.weekly || null;
+            this.renderDeliveryBoardContent();
+            this.updateQuestBadge();
+            const delivered = payload.delivered || {};
+            this.playSFX('quest');
+            this.showToast(`Đã giao đơn: +${delivered.rewardCoins || 0} vàng, +${delivered.rewardXp || 0} XP, +${delivered.weeklyPoints || 0} điểm.`);
+        } catch (err) {
+            this.showToast(err.message || 'Không giao được đơn hàng.');
+        }
+    }
+
+    async trashOrder(orderId) {
+        try {
+            const payload = await this.api.trashOrder(orderId);
+            this.deliveryOrders = payload.orders || [];
+            this.weeklyStatus = payload.weekly || null;
+            this.renderDeliveryBoardContent();
+            this.updateQuestBadge();
+            this.showToast('Đã hủy đơn. Đơn mới sẽ xuất hiện sau 60 giây.');
+        } catch (err) {
+            this.showToast(err.message || 'Không hủy được đơn hàng.');
+        }
+    }
+
+    async claimWeeklyMilestone(milestoneId) {
+        try {
+            const payload = await this.api.claimWeeklyMilestone(milestoneId);
+            this.applyServerState(payload.state);
+            this.weeklyStatus = payload.weekly || this.weeklyStatus;
+            this.renderDeliveryBoardContent();
+            this.updateQuestBadge();
+            this.playSFX('quest');
+            this.showToast('Đã nhận mốc thưởng tuần.');
+        } catch (err) {
+            this.showToast(err.message || 'Không nhận được mốc thưởng.');
+        }
+    }
+
+    async renderLeaderboard() {
+        if (!this.dom?.leaderboardList) return;
+        this.dom.leaderboardList.innerHTML = '<div class="market-empty">Đang tải bảng xếp hạng...</div>';
+        try {
+            this.leaderboardData = await this.api.getLevelLeaderboard();
+            this.renderLeaderboardContent();
+            this.updateQuestBadge();
+        } catch (err) {
+            this.dom.leaderboardList.innerHTML = `<div class="market-empty">${this.escapeHtml(err.message || 'Không tải được bảng xếp hạng.')}</div>`;
+        }
+    }
+
+    renderLeaderboardContent() {
+        const data = this.leaderboardData || {};
+        const leaderboard = data.leaderboard || {};
+        if (this.dom.leaderboardReset) {
+            this.dom.leaderboardReset.textContent = 'Cấp độ & XP';
+        }
+        if (this.dom.leaderboardMyRank) {
+            this.dom.leaderboardMyRank.textContent = leaderboard.me
+                ? `#${leaderboard.me.rank} - Cấp ${Number(leaderboard.me.level)}`
+                : 'Chưa xếp hạng';
+        }
+        if (this.dom.rankRewardPanel) this.dom.rankRewardPanel.innerHTML = '';
+
+        const rows = leaderboard.top || [];
+        if (!rows.length) {
+            this.dom.leaderboardList.innerHTML = '<div class="market-empty">Chưa có người chơi trong bảng xếp hạng.</div>';
+            return;
+        }
+
+        this.dom.leaderboardList.innerHTML = rows.map(row => `
+            <div class="leaderboard-row ${row.isMine ? 'mine' : ''}">
+                <div class="leaderboard-rank">#${row.rank}</div>
+                <div>
+                    <div class="leaderboard-name">${this.escapeHtml(row.farmName || 'Happy Farm')}</div>
+                    <div class="leaderboard-meta">${this.escapeHtml(row.ownerName || 'farmer')} | ${Number(row.xp || 0).toLocaleString('en-US')} XP</div>
+                </div>
+                <div class="leaderboard-meta">Cấp ${Number(row.level || 1)}</div>
+            </div>
+        `).join('');
+    }
+
+    renderRankRewardPanel() {
+        const panel = this.dom.rankRewardPanel;
+        if (!panel) return;
+        const previous = this.leaderboardData?.previousReward;
+        if (!previous || !previous.reward) {
+            panel.innerHTML = '';
+            return;
+        }
+        const status = previous.claimed ? 'Đã nhận' : previous.claimable ? 'Nhận thưởng' : 'Không có thưởng';
+        panel.innerHTML = `
+            <div class="milestone-title">Thưởng tuần trước: #${previous.rank} (${Number(previous.points || 0).toLocaleString('en-US')} điểm)</div>
+            <div class="milestone-reward">${this.escapeHtml(this.formatReward(previous.reward.reward))}</div>
+            <button class="btn-claim" id="btn-claim-rank-reward" ${previous.claimable ? '' : 'disabled'}>${status}</button>
+        `;
+        panel.querySelector('#btn-claim-rank-reward')?.addEventListener('click', () => this.claimWeeklyRankReward());
+    }
+
+    async claimWeeklyRankReward() {
+        try {
+            const payload = await this.api.claimWeeklyRankReward();
+            this.applyServerState(payload.state);
+            if (!this.leaderboardData) this.leaderboardData = {};
+            this.leaderboardData.previousReward = payload.previousReward;
+            this.renderLeaderboardContent();
+            this.updateQuestBadge();
+            this.playSFX('quest');
+            this.showToast('Đã nhận thưởng xếp hạng tuần trước.');
+        } catch (err) {
+            this.showToast(err.message || 'Không nhận được thưởng xếp hạng.');
+        }
+    }
+
     renderAchievements() {
         const container = this.dom.achievementList;
         container.innerHTML = '';
@@ -2891,7 +3919,7 @@ class Game {
     }
 
     updateHarvestAllBadge() {
-        const matureCount = this.inventory.state.plots.filter(p => p.state === 'mature').length;
+        const matureCount = this.inventory.state.plots.filter(p => p.state === 'mature' && this.isPlotUnlocked(p.id)).length;
         const badge = document.getElementById('harvest-all-badge');
         const btn = this.dom.btnHarvestAll;
         if (badge) {
@@ -2957,6 +3985,8 @@ class Game {
 
         const chickenCoop = document.getElementById('chicken-coop');
         const cowPen = document.getElementById('cow-pen');
+        const pigPen = document.getElementById('pig-pen');
+        const feedMillBuilding = document.getElementById('feed-mill-building');
         if (chickenCoop && this.inventory.state.layout.chickenCoop) {
             chickenCoop.style.left = `${this.inventory.state.layout.chickenCoop.left}%`;
             chickenCoop.style.top = `${this.inventory.state.layout.chickenCoop.top}%`;
@@ -2965,6 +3995,20 @@ class Game {
             cowPen.style.left = `${this.inventory.state.layout.cowPen.left}%`;
             cowPen.style.top = `${this.inventory.state.layout.cowPen.top}%`;
         }
+        if (pigPen && this.inventory.state.layout.pigPen) {
+            pigPen.style.left = `${this.inventory.state.layout.pigPen.left}%`;
+            pigPen.style.top = `${this.inventory.state.layout.pigPen.top}%`;
+        }
+        const ownsFeedMill = this.inventory.getInventoryAmount('buildings', 'feed_mill') > 0;
+        const feedMillLayout = this.inventory.state.layout.feedMill;
+        if (feedMillBuilding) {
+            feedMillBuilding.classList.toggle('hide', !ownsFeedMill || !feedMillLayout);
+            if (feedMillLayout) {
+                feedMillBuilding.style.left = `${feedMillLayout.left}%`;
+                feedMillBuilding.style.top = `${feedMillLayout.top}%`;
+            }
+        }
+        this.updateDesignFeedMillTray();
 
         this.updateSignpostText();
 
@@ -2974,6 +4018,8 @@ class Game {
             this.farmerHomePos.left = parseFloat(this.inventory.state.layout.farmhouse.left) + 16.0;
             this.farmerHomePos.top = parseFloat(this.inventory.state.layout.farmhouse.top) + 30.0;
         }
+
+        this.phaserWorld?.refreshGridLayout();
     }
 
     renderDecorations() {
@@ -2993,6 +4039,13 @@ class Game {
                 container.appendChild(div);
             });
         }
+    }
+
+    updateDesignFeedMillTray() {
+        const tray = document.getElementById('design-feed-mill-tray');
+        if (!tray || !this.inventory?.state) return;
+        const owned = this.inventory.getInventoryAmount('buildings', 'feed_mill') > 0;
+        tray.classList.toggle('hide', !this.isDesignMode || !owned || Boolean(this.inventory.state.layout.feedMill));
     }
 
     getPercentPosition(el) {
@@ -3026,7 +4079,23 @@ class Game {
         const onMouseDown = (e) => {
             if (!this.isDesignMode) return;
 
-            const draggable = e.target.closest('#farmhouse-overlay, #barn-overlay, #farm-grid-container, #shop-building, #pet-building, #quest-building, #achieve-building, #signpost-building, #chicken-coop, #cow-pen, .decor-outside');
+            const trayItem = e.target.closest('#design-feed-mill-item');
+            let draggable = e.target.closest('#farmhouse-overlay, #barn-overlay, #farm-grid-container, #shop-building, #pet-building, #quest-building, #achieve-building, #signpost-building, #chicken-coop, #cow-pen, #pig-pen, #feed-mill-building, .decor-outside');
+            if (trayItem) {
+                if (this.inventory.getInventoryAmount('buildings', 'feed_mill') <= 0) return;
+                const stage = document.getElementById('farm-stage');
+                const machine = document.getElementById('feed-mill-building');
+                if (!stage || !machine) return;
+                const rect = stage.getBoundingClientRect();
+                const left = Math.max(4, Math.min(96, ((e.clientX - rect.left) / rect.width) * 100));
+                const top = Math.max(8, Math.min(94, ((e.clientY - rect.top) / rect.height) * 100));
+                this.inventory.state.layout.feedMill = { left, top };
+                machine.style.left = `${left}%`;
+                machine.style.top = `${top}%`;
+                machine.classList.remove('hide');
+                this.updateDesignFeedMillTray();
+                draggable = machine;
+            }
             if (!draggable) return;
 
             e.preventDefault();
@@ -3067,6 +4136,16 @@ class Game {
 
             activeEl.style.left = `${newLeft.toFixed(2)}%`;
             activeEl.style.top = `${newTop.toFixed(2)}%`;
+
+            if (activeEl.id === 'farm-grid-container') {
+                if (!this.inventory.state.layout.farmGrid) {
+                    this.inventory.state.layout.farmGrid = { left: newLeft, top: newTop };
+                } else {
+                    this.inventory.state.layout.farmGrid.left = newLeft;
+                    this.inventory.state.layout.farmGrid.top = newTop;
+                }
+                this.phaserWorld?.refreshGridLayout();
+            }
         };
 
         const onMouseUp = () => {
@@ -3078,7 +4157,7 @@ class Game {
                 activeEl.style.zIndex = '10';
             } else if (activeEl.id === 'signpost-building') {
                 activeEl.style.zIndex = '';
-            } else if (activeEl.id === 'chicken-coop' || activeEl.id === 'cow-pen') {
+            } else if (['chicken-coop', 'cow-pen', 'pig-pen', 'feed-mill-building'].includes(activeEl.id)) {
                 activeEl.style.zIndex = '2';
             } else {
                 activeEl.style.zIndex = '';
@@ -3115,6 +4194,9 @@ class Game {
             viewport.addEventListener('mousedown', onMouseDown);
             viewport.addEventListener('touchstart', onTouchStart, { passive: false });
         }
+        const feedMillTrayItem = document.getElementById('design-feed-mill-item');
+        feedMillTrayItem?.addEventListener('mousedown', onMouseDown);
+        feedMillTrayItem?.addEventListener('touchstart', onTouchStart, { passive: false });
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('touchmove', onTouchMove, { passive: false });
         window.addEventListener('mouseup', onMouseUp);
@@ -3134,6 +4216,7 @@ class Game {
         document.querySelectorAll('.modal').forEach(m => m.classList.add('hide'));
         this.hideSeedPopup();
         this.hideCropDetail();
+        this.phaserWorld?.closeFeedTray();
 
         this.dom.container.classList.add('design-active');
 
@@ -3148,11 +4231,14 @@ class Game {
             signpost: this.inventory.state.layout.signpost ? { ...this.inventory.state.layout.signpost } : { left: 36, top: 12 },
             chickenCoop: this.inventory.state.layout.chickenCoop ? { ...this.inventory.state.layout.chickenCoop } : { left: 10, top: 56 },
             cowPen: this.inventory.state.layout.cowPen ? { ...this.inventory.state.layout.cowPen } : { left: 70, top: 18 },
+            pigPen: this.inventory.state.layout.pigPen ? { ...this.inventory.state.layout.pigPen } : { left: 80, top: 62 },
+            feedMill: this.inventory.state.layout.feedMill ? { ...this.inventory.state.layout.feedMill } : null,
             decorations: this.inventory.state.layout.decorations.map(d => ({ ...d }))
         };
 
         document.getElementById('design-banner').classList.remove('hide');
         document.getElementById('design-controls').classList.remove('hide');
+        this.updateDesignFeedMillTray();
 
         this.showToast('Đã vào Chế độ Thiết kế! Hãy kéo thả các vật thể.');
     }
@@ -3190,6 +4276,14 @@ class Game {
             const cowPen = document.getElementById('cow-pen');
             if (cowPen) this.inventory.state.layout.cowPen = this.getPercentPosition(cowPen);
 
+            const pigPen = document.getElementById('pig-pen');
+            if (pigPen) this.inventory.state.layout.pigPen = this.getPercentPosition(pigPen);
+
+            const feedMillBuilding = document.getElementById('feed-mill-building');
+            if (feedMillBuilding && !feedMillBuilding.classList.contains('hide')) {
+                this.inventory.state.layout.feedMill = this.getPercentPosition(feedMillBuilding);
+            }
+
             this.inventory.state.layout.decorations.forEach(decor => {
                 const el = document.getElementById(decor.id);
                 if (el) {
@@ -3204,6 +4298,7 @@ class Game {
                 this.farmerHomePos.top = parseFloat(this.inventory.state.layout.farmhouse.top) + 30.0;
             }
 
+            this.phaserWorld?.syncAll();
             this.inventory.saveGame();
             this.showToast('Đã lưu bố cục nông trại mới!');
         } else {
@@ -3211,6 +4306,8 @@ class Game {
             this.applyLayout();
             this.showToast('Đã hủy các thay đổi bố cục.');
         }
+
+        this.updateDesignFeedMillTray();
 
         const homeCoords = {
             x: this.farmerHomePos.left / 100 * 1280,

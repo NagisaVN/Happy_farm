@@ -4,7 +4,8 @@ export const CROP_CONFIGS = {
         name: 'Carrot',
         nameVi: 'Cà rốt',
         icon: '🥕',
-        growthTime: 370, // seconds (10s + 3m/stage * 2 stages)
+        growthTime: 30,
+        requiredLevel: 1,
         seedCost: 10,
         cropValue: 38,
         xpReward: 5
@@ -13,7 +14,8 @@ export const CROP_CONFIGS = {
         name: 'Corn',
         nameVi: 'Ngô',
         icon: '🌽',
-        growthTime: 30, // seconds
+        growthTime: 60,
+        requiredLevel: 2,
         seedCost: 20,
         cropValue: 83,
         xpReward: 12
@@ -22,7 +24,8 @@ export const CROP_CONFIGS = {
         name: 'Tomato',
         nameVi: 'Cà chua',
         icon: '🍅',
-        growthTime: 60, // seconds
+        growthTime: 120,
+        requiredLevel: 4,
         seedCost: 40,
         cropValue: 165,
         xpReward: 25
@@ -31,7 +34,8 @@ export const CROP_CONFIGS = {
         name: 'Pumpkin',
         nameVi: 'Bí ngô',
         icon: '🎃',
-        growthTime: 120, // seconds
+        growthTime: 240,
+        requiredLevel: 6,
         seedCost: 80,
         cropValue: 360,
         xpReward: 55

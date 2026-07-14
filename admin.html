@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Happy Farm Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+    <section id="admin-login" class="login-page">
+        <form id="admin-login-form" class="login-card">
+            <div class="brand-mark">🌾</div><h1>Happy Farm Admin</h1><p>Đăng nhập tài khoản quản trị hệ thống</p>
+            <label>Tên đăng nhập Admin<input name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+            <label>Mật khẩu<input name="password" type="password" required autocomplete="current-password"></label>
+            <div id="login-error" class="error-text"></div><button class="btn primary" type="submit">Đăng nhập</button>
+        </form>
+    </section>
+    <div id="admin-app" class="admin-app hidden">
+        <aside class="sidebar">
+            <div class="sidebar-brand"><span>🌾</span><div><strong>Happy Farm</strong><small>ADMIN SYSTEM</small></div></div>
+            <nav id="admin-nav">
+                <button class="active" data-page="dashboard">📊 Dashboard</button>
+                <button data-page="players">👨‍🌾 Quản lý người chơi</button>
+                <button data-page="crop">🌱 Quản lý cây trồng</button>
+                <button data-page="animal">🐄 Quản lý vật nuôi</button>
+                <button data-page="seed">🌾 Quản lý hạt giống</button>
+                <button data-page="item">🎁 Quản lý vật phẩm</button>
+                <button data-page="shop">🏪 Quản lý cửa hàng</button>
+                <button data-page="quest">📋 Quản lý nhiệm vụ</button>
+                <button data-page="leaderboards">🏆 Quản lý bảng xếp hạng</button>
+                <button data-page="deliveries">🚚 Quản lý giao hàng</button>
+                <button data-page="events">🎉 Quản lý sự kiện</button>
+                <button data-page="statistics">📈 Quản lý thống kê</button>
+                <button data-page="logs">🧾 Nhật ký hệ thống</button>
+                <button data-page="setting">⚙️ Cài đặt hệ thống</button>
+            </nav>
+        </aside>
+        <main>
+            <header class="topbar"><button id="menu-toggle" class="icon-btn">☰</button><div><h1 id="page-title">Dashboard</h1><p id="page-subtitle">Tổng quan hệ thống Happy Farm</p></div><div class="admin-profile"><span id="admin-email"></span><button id="logout-btn" class="btn ghost">Đăng xuất</button></div></header>
+            <div id="admin-content" class="content"><div class="loading">Đang tải dữ liệu…</div></div>
+        </main>
+    </div>
+    <dialog id="editor-dialog"><form id="editor-form" method="dialog"><div class="dialog-head"><h2 id="editor-title">Chỉnh sửa</h2><button value="cancel" class="icon-btn">×</button></div><div id="editor-fields" class="form-grid"></div><div class="dialog-actions"><button value="cancel" class="btn ghost">Hủy</button><button id="editor-save" value="default" class="btn primary">Lưu</button></div></form></dialog>
+    <div id="toast" class="toast hidden"></div>
+    <script type="module" src="/admin.js"></script>
+</body>
+</html>
